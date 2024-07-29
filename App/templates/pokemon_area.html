@@ -25,7 +25,7 @@
 
 {% block page %}Pokemon Area{% endblock %}
 
-{% block link%}
+{% block link %}
 <ul id="nav-mobile" class="right">
     <li><a href="/app">Home</a></li>
     <li><a href="/pokemon-area">Pokemon Area</a></li>
@@ -34,24 +34,34 @@
 </ul>
 {% endblock %}
 
-{% block styles%}
-
-td{
+{% block styles %}
+td {
 padding: 2px;
 }
 
 .card {
 border-radius: 10px;
-overflow: hidden;
+margin-top: 3rem;
+position: relative;
 }
 
-.card-image img {
-padding: 20px;
-background-color: rgba(255,255,255,0.2);
+.card-image {
+position: absolute;
+top: -40px;
+left: 50%;
+transform: translateX(-50%);
+width: 100px;
+height: 100px;
 }
 
 .card-content, .card-action {
-padding: 10px 20px;
+padding: 5px 20px;
+background-color: inherit;
+}
+
+.card-title {
+text-align: center;
+margin-top: 1rem;
 }
 
 .btn-floating {
@@ -62,13 +72,14 @@ background-color: rgba(255,255,255,0.3) !important;
 color: white;
 }
 
-.collection .collection-item.active{
+.collection .collection-item.active {
 background-color: #E53935;
 }
+
 #pokemon-detail p:nth-child(2) {
-/* Add your CSS styles here */
-color: blue; /* For example, changing text color to blue */
+color: blue;
 }
+
 .action-buttons {
 display: flex;
 align-items: center;
@@ -88,7 +99,6 @@ align-items: center;
 margin-right: 10px;
 }
 
-/* Style for the progress bar */
 .progress-bar {
 width: 100%;
 height: 20px;
@@ -104,25 +114,16 @@ border-radius: 10px;
 transition: width 0.5s ease-in-out;
 }
 
-/* Animation for selected radio button */
 input[type="radio"]:checked + span {
 animation: radioSelected 0.5s ease;
 }
 
 @keyframes radioSelected {
-0% {
-transform: scale(1);
+0% { transform: scale(1); }
+50% { transform: scale(1.2); }
+100% { transform: scale(1); }
 }
-50% {
-transform: scale(1.2);
-}
-100% {
-transform: scale(1);
-}
-}
-
 {% endblock %}
-
 
 {% block content %}
 <div class="row">
@@ -150,14 +151,13 @@ transform: scale(1);
             </form>
         </div>
 
-        <!-- List of all Pokemon as cards -->
         <div class="row">
             {% for pokemon in list_of_pokemon %}
             <div class="col s12 m6 l3">
                 <div class="card" style="background-color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }};">
                     <div class="card-image">
-                        <img
-                            src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png">
+                        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+                            alt="{{ pokemon.name }}">
                     </div>
                     <div class="card-content" style="color: white;">
                         <span class="card-title" style="color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">{{
@@ -196,13 +196,8 @@ transform: scale(1);
         var instances = M.FormSelect.init(elems, options);
     });
     function submitForm() {
-        // Get the selected generation value
         var selectedGeneration = document.querySelector('input[name="generation"]:checked').value;
-
-        // Set the selected generation value to a hidden input field
         document.getElementById("selected_generation").value = selectedGeneration;
-
-        // Submit the form
         document.getElementById("filter-form").submit();
     }
 </script>
