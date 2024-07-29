@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
+
 class UserPokemon(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -93,6 +94,7 @@ class User(db.Model):
 class Pokemon(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(255), nullable=False)
+  pokedex_number = db.Column(db.Integer, nullable=False)
   attack = db.Column(db.Integer, nullable=False)
   defense = db.Column(db.Integer, nullable=False)
   hp = db.Column(db.Integer, nullable=False)
@@ -103,11 +105,15 @@ class Pokemon(db.Model):
   type1 = db.Column(db.String(255), nullable=False)
   type2 = db.Column(db.String(255), default=None)
   weight = db.Column(db.Float)
+  generation = db.Column(db.Integer, nullable=False)
+  classification = db.Column(db.String(255), nullable=False)
+  abilities = db.Column(db.String(255))
 
   def get_json(self):
    return {
      'pokemon_id': self.id,
      'name': self.name,
+     'pokedex_number': self.pokedex_number,
      'attack': self.attack,
      'defense': self.defense,
      'hp': self.hp,
@@ -117,5 +123,9 @@ class Pokemon(db.Model):
      'speed': self.speed,
      'type1': self.type1,
      'type2': self.type2,
-     'weight': self.weight
+     'weight': self.weight,
+     'generation': self.generation,
+     'classification': self.classification,
+     'abilities': self.abilities.split(',') if self.abilities else [],
    }
+

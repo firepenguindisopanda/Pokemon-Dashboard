@@ -6,6 +6,7 @@
   <!-- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> -->
   <!--Import Google Icon Font-->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Roboto:300,400,500,700" type="text/css">
   <!-- Compiled and minified CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <link rel="stylesheet" href="/static/css/styles.css">
@@ -48,6 +49,24 @@
     /* icon prefix focus color */
     .input-field .prefix.active {
       color: #000;
+    }
+    /* Responsive Brand Logo */
+    @media only screen and (max-width: 600px) {
+      .brand-logo, .nav-wrapper {
+        font-size: 2px;
+      }
+    }
+
+    @media only screen and (min-width: 601px) and (max-width: 992px) {
+      .brand-logo {
+        font-size: 24px;
+      }
+    }
+
+    @media only screen and (min-width: 993px) {
+      .brand-logo {
+        font-size: 28px;
+      }
     }
   </style>
 

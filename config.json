@@ -1,0 +1,19 @@
+{
+    "slowMo": 50,
+    "timeout": 20000,
+    "args": [
+        "--no-sandbox",
+        "--disable-gpu",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--window-size=1400,1000"
+    ],
+    "ignoreDefaultArgs": ["--disable-extensions"],
+    "url":"http://localhost:8080",
+    "headless": true,
+    "devtools": false,
+    "ignoreHTTPSErrors": true,
+    "dumpio": false,
+    "defaultViewport": { "width": 1400, "height": 1000}
+
+}

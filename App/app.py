@@ -61,13 +61,62 @@ def initialize_db():
       if row['type2'] == '':
         row['type2'] = None
 
-      pokemon = Pokemon(name=row['name'], attack=row['attack'], defense=row['defense'], sp_attack=row['sp_attack'], sp_defense=row['sp_defense'], weight=row['weight_kg'], height=row['height_m'], hp=row['hp'], speed=row['speed'], type1=row['type1'], type2=row['type2'])
+      abilities_list = eval(row['abilities'])
+
+      # Create the Pokemon object and associate it with the abilities
+      pokemon = Pokemon(
+                name=row['name'], 
+                pokedex_number=row['pokedex_number'], 
+                attack=row['attack'], 
+                defense=row['defense'], 
+                sp_attack=row['sp_attack'], 
+                sp_defense=row['sp_defense'], 
+                weight=row['weight_kg'], 
+                height=row['height_m'], 
+                hp=row['hp'], 
+                speed=row['speed'], 
+                type1=row['type1'], 
+                type2=row['type2'], 
+                generation=row['generation'], 
+                classification=row['classification'],
+                abilities=','.join(abilities_list),
+            )
       db.session.add(pokemon)
+
     bob = User(username='bob', email="bob@mail.com", password="bobpass")
+    nick = User(username='nick', email="nick@mail.com", password="nickpass")
     db.session.add(bob)
+    db.session.add(nick)
     db.session.commit()
     bob.catch_pokemon(1, "Benny")
     bob.catch_pokemon(25, "Saul")
+    nick.catch_pokemon(120, 'Buddy')
+
+def login_user(username, password):
+  user = User.query.filter_by(username=username).first()
+  if user and user.check_password(password):
+    token = create_access_token(identity=user)
+    return token
+  return None
+
+def get_pokemon_list():
+  all_pokemon = [pokemens.get_json() for pokemens in Pokemon.query.all()]
+  return all_pokemon
+
+def search_pokemon_by_name(query):
+  # Query the database for Pokémon matching the search query
+  matching_pokemon = Pokemon.query.filter(Pokemon.name.ilike(f'%{query}%')).all()
+  # Convert the matching Pokémon to JSON format
+  results = [pokemon.get_json() for pokemon in matching_pokemon]
+  return results
+
+def filter_pokemon_by_generation(generation):
+  # Query the database for Pokémon belonging to the specified generation
+  matching_pokemon = Pokemon.query.filter_by(generation=generation).all()
+  # Convert the matching Pokémon to JSON format
+  results = [pokemon.get_json() for pokemon in matching_pokemon]
+  return results
+
 
 # ********** Routes **************
 
@@ -115,38 +164,129 @@ def logout_action():
 
 # *************************************
 
-# Page Routes (To Update)
+@app.route("/search", methods=['GET'])
+@jwt_required()
+def search_pokemon():
+  query = request.args.get('query', '')  # Get the search query from the URL parameters
+  if not query:
+    return redirect(url_for('pokemon_area'))  # If the query is empty, redirect to the home page
+
+  # Perform the search based on the query
+  results = search_pokemon_by_name(query)
+
+  return render_template("pokemon_area.html", list_of_pokemon=results)
 
 @app.route("/app", methods=['GET'])
 @app.route("/app/<int:pokemon_id>", methods=['GET'])
 @jwt_required()
 def home_page(pokemon_id=1):
-    # update pass relevant data to template
-    return render_template("home.html")
+  query = request.args.get('query', '')  # Get the search query from the URL parameters
+  # If there's a search query, perform the search and update the list of Pokémon
+  if query:
+    list_of_pokemon = search_pokemon_by_name(query)
+  else:
+    list_of_pokemon = get_pokemon_list()
+  # update pass relevant data to template
+  pokemon = Pokemon.query.get(pokemon_id).get_json()
+  user_pokemons = UserPokemon.query.filter_by(user_id=current_user.get_json()['id']).all()
+  user_pokemons_objects = [user_pokemon.get_json() for user_pokemon in user_pokemons]
+  
+  return render_template("home.html", list_of_pokemon=list_of_pokemon, selected_pokemon_id=pokemon_id, pokemon=pokemon, usr_pkmons=user_pokemons_objects)
 
-# Action Routes (To Update)
+@app.route("/pokemon-area", methods=['GET'])
+@jwt_required()
+def pokemon_area():
+  query = request.args.get('query', '')  # Get the search query from the URL parameters
+  selected_generation = request.args.get('generation', '')  # Get the selected generation
+  all_pokemon = get_pokemon_list()
+  if query:
+    list_of_pokemon = search_pokemon_by_name(query)
+  elif selected_generation:
+    list_of_pokemon = filter_pokemon_by_generation(selected_generation)
+  else:
+    list_of_pokemon = get_pokemon_list()
+
+  unique_generations = set(pokemon['generation'] for pokemon in all_pokemon)
+  unique_generations_list = list(unique_generations)
+  return render_template("pokemon_area.html", list_of_pokemon=list_of_pokemon, unique_generations_list=unique_generations_list, selected_generation=selected_generation)
+
+@app.route("/pokemon-area/pokemon-details/<int:pokemon_id>", methods=['GET', "POST"])
+@jwt_required()
+def pokemon_area_details(pokemon_id=None):
+  print(pokemon_id)
+  pokemon_to_display_details = Pokemon.query.get(pokemon_id).get_json()
+  return render_template("pokemon_area_details.html", current_user=current_user, pokemon=pokemon_to_display_details)
 
 @app.route("/login", methods=['POST'])
 def login_action():
   # implement login
-  return "Login Action"
+  data = request.form
+  token = login_user(data['username'], data['password'])
+  print(token)
+  response = None
+  if token:
+    flash('Logged in successfully.')  # send message to next page
+    response = redirect(url_for('home_page'))  # redirect to main page if login successful
+    set_access_cookies(response, token)
+  else:
+    flash('Invalid username or password')  # send message to next page
+    response = redirect(url_for('login_page'))
+  return response
 
 @app.route("/pokemon/<int:pokemon_id>", methods=['POST'])
 @jwt_required()
 def capture_action(pokemon_id):
-  # implement save newly captured pokemon, show a message then reload page
+  # Get the current user from the JWT token
+  current_user_id = current_user.id
+
+  # Retrieve the provided nickname from the form data
+  nickname = request.form.get('nickname')
+
+  # Check if the Pokémon is already captured by the user
+  if UserPokemon.query.filter_by(user_id=current_user_id, pokemon_id=pokemon_id).first():
+    flash('You already captured this Pokémon!')
+  else:
+    # Capture the Pokémon for the user with the provided nickname
+    current_user.catch_pokemon(pokemon_id, nickname)
+    flash('Successfully captured the Pokémon!')
+
   return redirect(request.referrer)
 
 @app.route("/rename-pokemon/<int:pokemon_id>", methods=['POST'])
 @jwt_required()
 def rename_action(pokemon_id):
-  # implement rename pokemon, show a message then reload page
+  # Retrieve the new name from the form data
+  print('Pokemon Id: ', pokemon_id)
+  form_id = 'new_name_' + str(pokemon_id)
+  new_name = request.form.get(form_id)
+  
+  # Find the user's Pokémon to rename
+  user_pokemon = UserPokemon.query.get(pokemon_id)
+  
+  print('Specific Pokemon: ', user_pokemon.id)
+  print('New Name: ', new_name)
+  if current_user.rename_pokemon(user_pokemon.id, new_name):
+    message = "Your Pokemon " + user_pokemon.get_json()['species'] + " has been given a new successfully!"
+    flash(message)
+  else:
+    flash("We encountered an error while renaming your pokemon. Please make sure you correctly provided a name")
+
   return redirect(request.referrer)
 
-@app.route("/release-pokemon/<int:pokemon_id>", methods=['GET'])
+@app.route("/release-pokemon/<int:pokemon_id>", methods=['POST'])
 @jwt_required()
 def release_action(pokemon_id):
-  # implement release pokemon, show a message then reload page
+  # Find the user's Pokémon to release
+  user_pokemon = UserPokemon.query.filter_by(user_id=current_user.get_json()['id'], pokemon_id=pokemon_id).first()
+
+  if user_pokemon:
+    # Delete the user's Pokémon
+    db.session.delete(user_pokemon)
+    db.session.commit()
+    flash('Successfully released the Pokémon!')
+  else:
+    flash('Error: Pokémon not found.')
+
   return redirect(request.referrer)
 
 if __name__ == "__main__":

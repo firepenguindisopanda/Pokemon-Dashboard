@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+
+{% block title %}Pokemon Area{% endblock %}
+
+{% block page %}Pokemon Area{% endblock %}
+
+{% block link%}
+<ul id="nav-mobile" class="right">
+  <li><a href="/app">Home</a></li>
+  <li><a href="/pokemon-area">Pokemon Area</a></li>
+  <li><a href="#">Pokemon Sandbox</a></li>
+  <li><a href="/logout">Logout</a></li>
+</ul>
+{% endblock %}
+
+{% block styles%}
+
+td {
+padding: 2px;
+}
+
+.collection .collection-item.active {
+background-color: #E53935;
+}
+
+#pokemon-detail p:nth-child(2) {
+color: blue;
+}
+
+.action-buttons {
+display: flex;
+align-items: center;
+justify-content: space-evenly;
+}
+
+.button-form {
+margin-bottom: 0;
+}
+
+.button-container {
+display: flex;
+align-items: center;
+}
+
+.input-field {
+margin-right: 10px;
+}
+
+.centered-text {
+text-align: center;
+}
+
+.progress-bar {
+width: 100%;
+height: 35px;
+background-color: #f2f2f2;
+border-radius: 10px;
+padding: 0px;
+margin: 0px;
+overflow: hidden;
+margin-bottom: 10px;
+position: relative;
+}
+
+.progress-bar > .progress {
+height: 100%;
+background-color: #4caf50;
+border-radius: 10px;
+transition: width 0.5s ease-in-out;
+position: absolute;
+top: 0;
+left: 0;
+}
+
+.type-grass {
+color: hwb(114 0% 31%);
+}
+
+.type-fire {
+color: red;
+}
+
+.type-water {
+color: blue;
+}
+
+.pokemon-sprite-container {
+display: flex;
+justify-content: center;
+margin: 20px 0;
+}
+
+.pokemon-sprite {
+width: 100px;
+height: 100px;
+object-fit: contain;
+border-radius: 5px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12 m12 l12 list-container collection" style="max-height: 78vh;">
+    Welcome {{current_user.username}}
+  </div>
+  <div class="col s6 m6 l6 centered-text">
+    <h1><strong class="pokemon-name">{{pokemon.name}}'s</strong> Info</h1>
+    <div class="pokemon-sprite-container">
+      <img class="pokemon-sprite"
+        src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+        alt="{{ pokemon.name }}">
+    </div>
+  </div>
+  <div class="col s6 m6 l6 centered-text">
+    <h1><strong class="pokemon-name">{{pokemon.name}}'s</strong> Statistics</h1>
+    <div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.hp }}%;">HP: {{ pokemon.hp }}</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.attack }}%;">Attack: {{ pokemon.attack }}</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.defense }}%;">Defense: {{ pokemon.defense }}</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.sp_attack }}%;">Special Attack: {{ pokemon.sp_attack }}</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.sp_defense }}%;">Special Defense: {{ pokemon.sp_defense }}</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ pokemon.speed }}%;">Speed: {{ pokemon.speed }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Get all elements with the class "pokemon-name"
+  const pokemonNameElements = document.querySelectorAll('.pokemon-name');
+  const pokemonType = '{{ pokemon.type1 }}'; // Assuming you have access to the Pokemon type in your template
+
+  // Map Pokemon types to corresponding CSS classes (modify as needed)
+  const typeColors = {
+    grass: 'type-grass',
+    fire: 'type-fire',
+    water: 'type-water',
+    // Add mappings for other types
+  };
+
+  // Loop through each element and apply the corresponding class
+  pokemonNameElements.forEach(element => {
+    element.classList.add(typeColors[pokemonType.toLowerCase()]);
+  });
+</script>
+{% endblock %}
