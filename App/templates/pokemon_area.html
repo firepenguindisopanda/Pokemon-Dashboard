@@ -29,6 +29,7 @@
 <ul id="nav-mobile" class="right">
     <li><a href="/app">Home</a></li>
     <li><a href="/pokemon-area">Pokemon Area</a></li>
+    <li><a href="/pokemon-stats">Pokemon Dashboard</a></li>
     <li><a href="#">Pokemon Sandbox</a></li>
     <li><a href="/logout">Logout</a></li>
 </ul>
@@ -55,13 +56,13 @@ height: 100px;
 }
 
 .card-content, .card-action {
-padding: 5px 20px;
+padding: 5px 10px;
 background-color: inherit;
 }
 
 .card-title {
 text-align: center;
-margin-top: 1rem;
+margin-top: .5rem;
 }
 
 .btn-floating {
@@ -123,17 +124,51 @@ animation: radioSelected 0.5s ease;
 50% { transform: scale(1.2); }
 100% { transform: scale(1); }
 }
+
+.search-container {
+display: flex;
+justify-content: center;
+align-items: center;
+margin-bottom: 20px;
+}
+
+.search-container input {
+border: none;
+border-bottom: 1px solid #ccc;
+outline: none;
+padding: 10px;
+width: 300px;
+margin-right: 10px;
+}
+
+.search-container button {
+background-color: #FBC02D;
+color: black;
+border: none;
+padding: 10px 20px;
+cursor: pointer;
+border-radius: 5px;
+}
+
+.search-container button:hover {
+background-color: #f9a825;
+}
+
+.search-container input::placeholder {
+color: #ccc;
+}
 {% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col s12 m12 l12 list-container collection" style="max-height: 78vh;">
         <div class="container">
-            <form action="/search" method="GET">
-                <input type="text" name="query" placeholder="Search for a Pokémon">
-                <button type="submit" class="black-text white waves-effect waves-light btn-small"
-                    style="border: 1px solid black;">Search</button>
-            </form>
+            <div class="search-container">
+                <form action="/search" method="GET">
+                    <input type="text" name="query" placeholder="Pokémon name, number or type">
+                    <button type="submit">Search</button>
+                </form>
+            </div>
             <form action="/pokemon-area" method="GET" id="filter-form">
                 <input type="hidden" name="selected_generation" id="selected_generation"
                     value="{{ selected_generation }}">
@@ -154,7 +189,7 @@ animation: radioSelected 0.5s ease;
         <div class="row">
             {% for pokemon in list_of_pokemon %}
             <div class="col s12 m6 l3">
-                <div class="card" style="background-color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }};">
+                <div class="card" style="background-color: {{ type_colors.get(pokemon.type1, '#A8A878') }};">
                     <div class="card-image">
                         <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
                             alt="{{ pokemon.name }}">
@@ -193,7 +228,7 @@ animation: radioSelected 0.5s ease;
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var elems = document.querySelectorAll('select');
-        var instances = M.FormSelect.init(elems, options);
+        var instances = M.FormSelect.init(elems);
     });
     function submitForm() {
         var selectedGeneration = document.querySelector('input[name="generation"]:checked').value;

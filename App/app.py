@@ -34,6 +34,27 @@ app.app_context().push()
 CORS(app)
 jwt = JWTManager(app)
 
+type_colors = {
+"grass": "#78C850",
+"fire": "#F08030",
+"water": "#6890F0",
+"bug": "#A8B820",
+"normal": "#A8A878",
+"poison": "#A040A0",
+"electric": "#F8D030",
+"ground": "#E0C068",
+"fairy": "#EE99AC",
+"fighting": "#C03028",
+"psychic": "#F85888",
+"rock": "#B8A038",
+"ghost": "#705898",
+"ice": "#98D8D8",
+"dragon": "#7038F8",
+"flying": "#A890F0",
+"steel": "#B8B8D0",
+"dark": "#705848"
+}
+
 # JWT Config to enable current_user
 @jwt.user_identity_loader
 def user_identity_lookup(user):
@@ -272,6 +293,89 @@ def rename_action(pokemon_id):
     flash("We encountered an error while renaming your pokemon. Please make sure you correctly provided a name")
 
   return redirect(request.referrer)
+
+def get_combined_type_distribution():
+  type_counts = {}
+  all_pokemon = Pokemon.query.all()
+    
+  for pokemon in all_pokemon:
+      types = [pokemon.type1]
+      if pokemon.type2:
+        types.append(pokemon.type2)
+        
+      for type_ in types:
+        if type_ in type_counts:
+          type_counts[type_] += 1
+        else:
+          type_counts[type_] = 1
+    
+  return type_counts
+
+@app.route("/pokemon-stats", methods=['GET'])
+@jwt_required()
+def pokemon_stats():
+    # Retrieve Pokémon data for the charts
+    pokemon_data = db.session.query(
+        Pokemon.type1,
+        db.func.count(Pokemon.id).label('count')
+    ).group_by(Pokemon.type1).all()
+
+    # Prepare data for the bar chart
+    chart_data = {
+        'labels': [data.type1 for data in pokemon_data],
+        'values': [data.count for data in pokemon_data],
+        'colors': [type_colors.get(data.type1, '#FFFFFF') for data in pokemon_data]
+    }
+
+    # Prepare data for the pie chart (percentage distribution)
+    total_pokemon = sum(chart_data['values'])
+    pie_chart_data = {
+        'labels': chart_data['labels'],
+        'values': [(count / total_pokemon) * 100 for count in chart_data['values']]
+    }
+
+    # Calculate additional statistics
+    avg_stats = db.session.query(
+        db.func.avg(Pokemon.hp).label('hp'),
+        db.func.avg(Pokemon.attack).label('attack'),
+        db.func.avg(Pokemon.defense).label('defense'),
+        db.func.avg(Pokemon.sp_attack).label('sp_attack'),
+        db.func.avg(Pokemon.sp_defense).label('sp_defense'),
+        db.func.avg(Pokemon.speed).label('speed')
+    ).first()
+
+    # Add this new section
+    combined_type_data = get_combined_type_distribution()
+    combined_chart_data = {
+        'labels': list(combined_type_data.keys()),
+        'values': list(combined_type_data.values()),
+        'colors': [type_colors.get(type_, '#FFFFFF') for type_ in combined_type_data.keys()]
+    }
+
+    return render_template("pokemon_dashboard.html", 
+                           chart_data=chart_data, 
+                           pie_chart_data=pie_chart_data, 
+                           combined_chart_data=combined_chart_data,
+                           total_pokemon=total_pokemon, 
+                           avg_stats=avg_stats._asdict())
+
+@app.route("/pokemon-piechart", methods=['GET'])
+@jwt_required()
+def pokemon_piechart():
+  # Retrieve Pokémon data for charting
+  pokemon_data = db.session.query(
+      Pokemon.type1,
+      db.func.count(Pokemon.id).label('count')
+  ).group_by(Pokemon.type1).all()
+  
+  # Prepare data for Chart.js
+  chart_data = {
+      'labels': [data.type1 for data in pokemon_data],
+      'values': [data.count for data in pokemon_data]
+  }
+
+  return render_template("pokemon_piechart.html", chart_data=chart_data)
+
 
 @app.route("/release-pokemon/<int:pokemon_id>", methods=['POST'])
 @jwt_required()

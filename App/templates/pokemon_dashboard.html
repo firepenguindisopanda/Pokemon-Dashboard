@@ -1,0 +1,180 @@
+{% extends "layout.html" %}
+
+{% set type_colors = {
+"grass": "#78C850",
+"fire": "#F08030",
+"water": "#6890F0",
+"bug": "#A8B820",
+"normal": "#A8A878",
+"poison": "#A040A0",
+"electric": "#F8D030",
+"ground": "#E0C068",
+"fairy": "#EE99AC",
+"fighting": "#C03028",
+"psychic": "#F85888",
+"rock": "#B8A038",
+"ghost": "#705898",
+"ice": "#98D8D8",
+"dragon": "#7038F8",
+"flying": "#A890F0",
+"steel": "#B8B8D0",
+"dark": "#705848"
+} %}
+
+{% block title %}Pokemon Stats{% endblock %}
+
+{% block page %}Pokemon Stats{% endblock %}
+
+{% block link %}
+<ul id="nav-mobile" class="right">
+    <li><a href="/app">Home</a></li>
+    <li><a href="/pokemon-area">Pokemon Area</a></li>
+    <li><a href="/pokemon-stats">Pokemon Dashboard</a></li>
+    <li><a href="#">Pokemon Sandbox</a></li>
+    <li><a href="/logout">Logout</a></li>
+</ul>
+{% endblock %}
+
+{% block styles %}
+td {
+padding: 2px;
+}
+
+.collection .collection-item.active {
+background-color: #E53935;
+}
+
+.progress-bar {
+width: 100%;
+height: 20px;
+background-color: #f2f2f2;
+border-radius: 10px;
+overflow: hidden;
+}
+
+.progress-bar .progress {
+height: 100%;
+background-color: #4caf50;
+border-radius: 10px;
+transition: width 0.5s ease-in-out;
+}
+
+.chart-container {
+width: 80%;
+margin: 0 auto;
+}
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="center-align">Pokémon Stats</h1>
+
+    <div class="row" style="padding: 2rem 0;">
+        <div class="col s12" style="margin-bottom: 4rem;">
+            <div class="chart-container">
+                <canvas id="pokemonBarChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+        <div class="col s12">
+            <div class="chart-container">
+                <canvas id="pokemonPieChart" width="300" height="200"></canvas>
+            </div>
+        </div>
+        <div class="col s12" style="margin-top: 4rem;">
+            <div class="chart-container">
+                <canvas id="combinedTypeChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12">
+            <h5>Total Pokémon: {{ total_pokemon }}</h5>
+            <h5>Average Stats:</h5>
+            <ul>
+                <li>HP: {{ avg_stats.hp }}</li>
+                <li>Attack: {{ avg_stats.attack }}</li>
+                <li>Defense: {{ avg_stats.defense }}</li>
+                <li>Sp. Attack: {{ avg_stats.sp_attack }}</li>
+                <li>Sp. Defense: {{ avg_stats.sp_defense }}</li>
+                <li>Speed: {{ avg_stats.speed }}</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Prepare data from Flask
+        const chartData = {{ chart_data | tojson }};
+        const pieChartData = {{ pie_chart_data | tojson }};
+        const combinedChartData = {{ combined_chart_data | tojson }};
+
+        // Create Bar Chart
+        const ctxBar = document.getElementById('pokemonBarChart').getContext('2d');
+        const pokemonBarChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Number of Pokémon',
+                    data: chartData.values,
+                    backgroundColor: chartData.colors,
+                    borderColor: chartData.colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Create Pie Chart
+        const ctxPie = document.getElementById('pokemonPieChart').getContext('2d');
+        const pokemonPieChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: pieChartData.labels,
+                datasets: [{
+                    label: 'Percentage of Pokémon by Type',
+                    data: pieChartData.values,
+                    backgroundColor: chartData.colors
+                }]
+            }
+        });
+
+        // Create Combined Type Chart
+        const ctxCombined = document.getElementById('combinedTypeChart').getContext('2d');
+        const combinedTypeChart = new Chart(ctxCombined, {
+            type: 'bar',
+            data: {
+                labels: combinedChartData.labels,
+                datasets: [{
+                    label: 'Number of Pokémon (Including Dual Types)',
+                    data: combinedChartData.values,
+                    backgroundColor: combinedChartData.colors,
+                    borderColor: combinedChartData.colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Pokémon Type Distribution (Including Dual Types)'
+                    }
+                }
+            }
+        })
+    </script>
+</div>
+{% endblock %}
