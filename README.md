@@ -1,4 +1,4 @@
-# INFO 2602 Assignment 2
+# Pokemon Dashboard App
 
 
 # Setup
