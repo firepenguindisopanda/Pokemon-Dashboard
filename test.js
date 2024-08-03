@@ -1,92 +1,77 @@
-const testsuite3 = require('testsuite3');
+const puppeteer = require('puppeteer');
+const chai = require('chai');
+const expect = chai.expect;
+const config = require("./config.json");
 
-// const config = require("./config.json");
-// const puppeteer = require('puppeteer');
+describe('Flask Application Tests', function() {
+    let browser;
+    let page;
 
-// async function initialize(){
-//     const browser = await puppeteer.launch(config);
-//     const [page] = await browser.pages();
-//     await page.emulateMediaType("screen");
-//     await page.setViewport(config.defaultViewport);
-//     await page.goto(config.url+"/init", {waitUntil: "load", timeout: 0});
-//     return {browser, page};
-// }
+    // Increase the default timeout for each test
+    this.timeout(10000);
 
-// async function login(page){
-//     await page.type('#username', 'bob');
-//     await page.type('#password', 'bobpass');
-//     await page.click('input[type="submit"]');
-//     return page;
-// }
+    before(async function() {
+        browser = await puppeteer.launch(config);
+        [page] = await browser.pages();
+        await page.emulateMediaType("screen");
+        await page.setViewport(config.defaultViewport);
+        await page.goto(config.url + "/init", {waitUntil: "load", timeout: 0});
+    });
 
-// async function selectPokemon(page, id){
-//     await page.click(`#poke-${id}`);
-//     let details = await Promise.all([
-//         page.$eval("#pokemon-detail .card-title", e => e.innerText),
-//         page.$eval("#pokemon-detail p:nth-child(2)", e => e.innerText),
-//         page.$eval("#pokemon-detail p:nth-child(3)", e => e.innerText),
-//         page.$eval("#pokemon-detail p:nth-child(4)", e => e.innerText),
-//         page.$eval("#pokemon-detail p:nth-child(5)", e => e.innerText),
-//         page.$eval("#pokemon-detail img", e => e.getAttribute("src"))
-//     ]);
+    after(async function() {
+        if (browser) {
+            await browser.close();
+        }
+    });
 
-//     let [name, type1, type2, weight, height, image] = details;
-//     return {name, type1, type2, weight, height, image};
-// }
+    it('should log in successfully', async function() {
+        try {
+            await page.waitForSelector('#username', {timeout: 5000});
+            await page.type('#username', 'bob');
+            await page.type('#password', 'bobpass');
+            await page.click('input[type="submit"]');
+            await page.waitForNavigation({timeout: 10000});
+            const loggedIn = await page.evaluate(() => document.querySelector('#logout') !== null);
+            expect(loggedIn).to.be.true;
+        } catch (error) {
+            console.error('Login failed:', error);
+            throw error;
+        }
+    });
 
-// async function capturePokemon(page, name){
+    it('should select a Pokémon and verify details', async function() {
+        await page.waitForSelector('#poke-54', {timeout: 5000});
+        await page.click('#poke-54');
+        let details = await Promise.all([
+            page.$eval("#pokemon-detail .card-title", e => e.innerText),
+            page.$eval("#pokemon-detail p:nth-child(2)", e => e.innerText),
+            page.$eval("#pokemon-detail p:nth-child(3)", e => e.innerText),
+            page.$eval("#pokemon-detail p:nth-child(4)", e => e.innerText),
+            page.$eval("#pokemon-detail p:nth-child(5)", e => e.innerText),
+            page.$eval("#pokemon-detail img", e => e.getAttribute("src"))
+        ]);
 
-//     await page.type('#pokemon_name', name);
-//     await page.click('#captureBtn');
-//     try{
-//         const new_poke = await page.evaluate(async (name) => {
-      
-//             const rows = Array.from(document.querySelectorAll('table tbody tr')); // Select all the rows in the table
-//             let pokemon = [];
-//             let names = [];
+        let [name, type1, type2, weight, height, image] = details;
+        expect(name).to.not.be.empty;
+        expect(type1).to.not.be.empty;
+        expect(weight).to.not.be.empty;
+        expect(height).to.not.be.empty;
+        expect(image).to.not.be.empty;
+    });
 
-//             for (let i = 0; i < rows.length; i++) {
-//               const cells = rows[i].querySelectorAll('td'); // Get all cells of the row
-//               if (cells.length > 1) { // Make sure the row has at least two columns
-//                 pokemon.push(cells[0].textContent.trim()); // Get text from the first column
-//                 names.push(cells[1].textContent.trim()); // Get text from the second column
-//               }
-//             }
+    it('should capture a Pokémon and verify it is in the list', async function() {
+        const pokemonName = 'Duke';
+        await page.waitForSelector('#pokemon_name', {timeout: 5000});
+        await page.type('#pokemon_name', pokemonName);
+        await page.click('#captureBtn');
 
-//             const cell_rename = document.querySelector(`#rename-${name}`);
-//             const cell_release = document.querySelector(`#release-${name}`);
-    
-//             return {pokemon, names, cell_rename, cell_release};
-//         }, name);
+        await page.waitForSelector('table tbody', {timeout: 5000});
+        const captured_poke = await page.evaluate(async (pokemonName) => {
+            const rows = Array.from(document.querySelectorAll('table tbody tr'));
+            let names = rows.map(row => row.querySelector('td:nth-child(2)').innerText.trim());
+            return names.includes(pokemonName);
+        }, pokemonName);
 
-//         return new_poke;
-//     }catch(e){
-//         console.error(e);
-//         return {
-//             pokemon:[], 
-//             names:[], 
-//             cell_rename:null, 
-//             cell_release: null
-//         }
-//     }
-
-// }
-
-// async function main(){
-//     const {browser, page} = await initialize();
-//     try {
-//         await login(page);
-//         let selectedPokemon = await selectPokemon(page, 54);
-//         let captured_poke = await capturePokemon(page, "Duke");
-//         await browser.close();
-//     }
-//     catch(e){
-//         console.error(e);
-//     }finally{
-//         console.log('done');
-//         if(browser) await browser.close();
-//     }
-// }
-
-// main();
-
+        expect(captured_poke).to.be.true;
+    });
+});

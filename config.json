@@ -9,7 +9,7 @@
         "--window-size=1400,1000"
     ],
     "ignoreDefaultArgs": ["--disable-extensions"],
-    "url":"http://localhost:8080",
+    "url":"https://8080-uwidcit-info2602a2-ty0zdrjjzc8.ws-us115.gitpod.io/",
     "headless": true,
     "devtools": false,
     "ignoreHTTPSErrors": true,
