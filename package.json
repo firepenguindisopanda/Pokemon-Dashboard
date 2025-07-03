@@ -7,6 +7,8 @@
     "update-test": "npm install --save testsuite3@latest",
     "init": "flask init",
     "start": "flask run",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run --browser chrome",
     "test": "mocha"
   },
   "repository": {
@@ -21,9 +23,9 @@
   },
   "homepage": "https://github.com/uwidcit/info2602a2#readme",
   "dependencies": {
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0",
-    "puppeteer": "^19.7.2",
-    "testsuite3": "^1.1.0"
+    "chai": "^4.3.7"
+  },
+  "devDependencies": {
+    "cypress": "^14.5.1"
   }
 }
