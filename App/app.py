@@ -11,7 +11,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     current_user
 )
-from .models import db, User, UserPokemon, Pokemon
+from App.models import db, User, UserPokemon, Pokemon
 
 # Configure Flask App
 app = Flask(__name__)
@@ -63,7 +63,7 @@ def user_identity_lookup(user):
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
   identity = jwt_data["sub"]
-  return User.query.get(identity)
+  return db.session.get(User, identity)
 
 # *************************************
 
@@ -208,7 +208,7 @@ def home_page(pokemon_id=1):
   else:
     list_of_pokemon = get_pokemon_list()
   # update pass relevant data to template
-  pokemon = Pokemon.query.get(pokemon_id).get_json()
+  pokemon = db.session.get(Pokemon, pokemon_id).get_json()
   user_pokemons = UserPokemon.query.filter_by(user_id=current_user.get_json()['id']).all()
   user_pokemons_objects = [user_pokemon.get_json() for user_pokemon in user_pokemons]
   
@@ -235,7 +235,7 @@ def pokemon_area():
 @jwt_required()
 def pokemon_area_details(pokemon_id=None):
   print(pokemon_id)
-  pokemon_to_display_details = Pokemon.query.get(pokemon_id).get_json()
+  pokemon_to_display_details = db.session.get(Pokemon, pokemon_id).get_json()
   return render_template("pokemon_area_details.html", current_user=current_user, pokemon=pokemon_to_display_details)
 
 @app.route("/login", methods=['POST'])
@@ -282,7 +282,7 @@ def rename_action(pokemon_id):
   new_name = request.form.get(form_id)
   
   # Find the user's Pokémon to rename
-  user_pokemon = UserPokemon.query.get(pokemon_id)
+  user_pokemon = db.session.get(UserPokemon, pokemon_id)
   
   print('Specific Pokemon: ', user_pokemon.id)
   print('New Name: ', new_name)
