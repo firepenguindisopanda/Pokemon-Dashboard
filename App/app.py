@@ -1,6 +1,6 @@
 import os, csv
 import datetime
-from flask import Flask, request, redirect, render_template, url_for, flash
+from flask import Flask, request, redirect, render_template, url_for, flash, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import (
@@ -12,6 +12,8 @@ from flask_jwt_extended import (
     current_user
 )
 from App.models import db, User, UserPokemon, Pokemon
+from App.lib import PokemonAnalytics, get_analytics_instance
+import pandas as pd
 
 # Configure Flask App
 app = Flask(__name__)
@@ -294,6 +296,183 @@ def rename_action(pokemon_id):
 
   return redirect(request.referrer)
 
+# Global analytics instance (initialize once)
+pokemon_analytics = None
+
+def initialize_pokemon_analytics():
+    """Initialize the analytics instance with your Pokemon data"""
+    global pokemon_analytics
+    try:
+        # Load data from your existing Pokemon table
+        all_pokemon = Pokemon.query.all()
+        
+        # Convert to DataFrame format
+        pokemon_data = []
+        for pokemon in all_pokemon:
+            pokemon_dict = {
+                'name': pokemon.name,
+                'pokedex_number': pokemon.pokedex_number,
+                'hp': pokemon.hp,
+                'attack': pokemon.attack,
+                'defense': pokemon.defense,
+                'sp_attack': pokemon.sp_attack,
+                'sp_defense': pokemon.sp_defense,
+                'speed': pokemon.speed,
+                'base_total': (pokemon.hp + pokemon.attack + pokemon.defense + 
+                             pokemon.sp_attack + pokemon.sp_defense + pokemon.speed),
+                'type1': pokemon.type1,
+                'type2': pokemon.type2 if pokemon.type2 else 'None',
+                'generation': pokemon.generation,
+                'height_m': pokemon.height if pokemon.height else 1.0,
+                'weight_kg': pokemon.weight if pokemon.weight else 10.0,
+                'classification': pokemon.classification,
+                'abilities': pokemon.abilities,
+                'capture_rate': 45,  # Default value since not in your schema
+                'is_legendary': 0,   # Default value since not in your schema
+                'percentage_male': 50.0  # Default value
+            }
+            pokemon_data.append(pokemon_dict)
+        
+        df = pd.DataFrame(pokemon_data)
+        
+        # Initialize analytics
+        pokemon_analytics = PokemonAnalytics()
+        pokemon_analytics.load_data(data=df)
+        pokemon_analytics.clean_data()
+        
+        # Train models
+        pokemon_analytics.train_predictive_models()
+        
+        return True
+    except Exception as e:
+        print(f"Error initializing analytics: {e}")
+        return False
+
+# Analytics Dashboard Routes
+
+@app.route("/api/pokemon-analytics/stats", methods=['GET'])
+@jwt_required()
+def get_pokemon_descriptive_stats():
+    """Get comprehensive descriptive statistics"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        stats = pokemon_analytics.get_descriptive_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/pokemon-analytics/diagnostics", methods=['GET'])
+@jwt_required()
+def get_pokemon_diagnostics():
+    """Get diagnostic analysis and correlations"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        diagnostics = pokemon_analytics.diagnostic_analysis()
+        return jsonify(diagnostics)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/pokemon-analytics/clustering", methods=['GET'])
+@jwt_required()
+def get_pokemon_clustering():
+    """Perform clustering analysis"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        n_clusters = request.args.get('clusters', 5, type=int)
+        clustering_results = pokemon_analytics.perform_clustering(n_clusters)
+        return jsonify(clustering_results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/pokemon-analytics/predict", methods=['POST'])
+@jwt_required()
+def predict_pokemon_performance():
+    """Predict Pokemon stats and legendary status"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        pokemon_data = request.json
+        
+        # Ensure required fields with defaults
+        required_fields = {
+            'hp': 50, 'attack': 50, 'defense': 50, 'sp_attack': 50, 
+            'sp_defense': 50, 'speed': 50, 'type1': 'normal', 
+            'type2': 'None', 'generation': 1, 'height_m': 1.0, 
+            'weight_kg': 10.0, 'capture_rate': 45, 'num_abilities': 1
+        }
+        
+        for field, default in required_fields.items():
+            if field not in pokemon_data:
+                pokemon_data[field] = default
+        
+        # Calculate base_total
+        pokemon_data['base_total'] = (
+            pokemon_data['hp'] + pokemon_data['attack'] + pokemon_data['defense'] +
+            pokemon_data['sp_attack'] + pokemon_data['sp_defense'] + pokemon_data['speed']
+        )
+        
+        predictions = pokemon_analytics.predict_pokemon_stats(pokemon_data)
+        return jsonify(predictions)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/pokemon-analytics/optimize", methods=['GET'])
+@jwt_required()
+def optimize_pokemon_build():
+    """Get optimal Pokemon build recommendations"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        optimal_build = pokemon_analytics.optimize_pokemon_build()
+        return jsonify(optimal_build)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/pokemon-analytics/model-performance", methods=['GET'])
+@jwt_required()
+def get_model_performance():
+    """Get model training results and performance metrics"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        # Retrain to get fresh performance metrics
+        performance = pokemon_analytics.train_predictive_models()
+        return jsonify(performance)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Dashboard Route
+@app.route("/pokemon-stats", methods=['GET'])
+@jwt_required()
+def pokemon_analytics_dashboard():
+    """Render the analytics dashboard page"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        initialize_pokemon_analytics()
+    
+    return render_template("pokemon_dashboard.html")
+
 def get_combined_type_distribution():
   type_counts = {}
   all_pokemon = Pokemon.query.all()
@@ -311,7 +490,7 @@ def get_combined_type_distribution():
     
   return type_counts
 
-@app.route("/pokemon-stats", methods=['GET'])
+@app.route("/pokemon-stats-v1", methods=['GET'])
 @jwt_required()
 def pokemon_stats():
     # Retrieve Pokémon data for the charts

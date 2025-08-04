@@ -1,25 +1,25 @@
 {% extends "layout.html" %}
 
 {% set type_colors = {
-    "grass": "#78C850",
-    "fire": "#F08030",
-    "water": "#6890F0",
-    "bug": "#A8B820",
-    "normal": "#A8A878",
-    "poison": "#A040A0",
-    "electric": "#F8D030",
-    "ground": "#E0C068",
-    "fairy": "#EE99AC",
-    "fighting": "#C03028",
-    "psychic": "#F85888",
-    "rock": "#B8A038",
-    "ghost": "#705898",
-    "ice": "#98D8D8",
-    "dragon": "#7038F8",
-    "flying": "#A890F0",
-    "steel": "#B8B8D0",
-    "dark": "#705848"
-    } %}
+"grass": "#78C850",
+"fire": "#F08030",
+"water": "#6890F0",
+"bug": "#A8B820",
+"normal": "#A8A878",
+"poison": "#A040A0",
+"electric": "#F8D030",
+"ground": "#E0C068",
+"fairy": "#EE99AC",
+"fighting": "#C03028",
+"psychic": "#F85888",
+"rock": "#B8A038",
+"ghost": "#705898",
+"ice": "#98D8D8",
+"dragon": "#7038F8",
+"flying": "#A890F0",
+"steel": "#B8B8D0",
+"dark": "#705848"
+} %}
 
 {% block title %}Home{% endblock %}
 
@@ -41,67 +41,106 @@ td{
 padding: 2px;
 }
 
+.list-container {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh; 
+  border-right: 1px solid #ddd; 
+}
+
+.search-wrapper {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  background: white;  
+  padding: 8px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+.pokemon-list-wrapper {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.pokemon-list-wrapper .collection {
+  margin: 0;
+  border: none;
+}
+
 .collection .collection-item.active{
 background-color: #E53935;
 }
 #pokemon-detail p:nth-child(2) {
-    /* Add your CSS styles here */
-    color: blue; /* For example, changing text color to blue */
+/* Add your CSS styles here */
+color: blue; /* For example, changing text color to blue */
 }
 .action-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
+display: flex;
+align-items: center;
+justify-content: space-evenly;
 }
 
 .button-form {
-    margin-bottom: 0;
+margin-bottom: 0;
 }
 
 .button-container {
-    display: flex;
-    align-items: center;
+display: flex;
+align-items: center;
 }
 
 .input-field {
-    margin-right: 10px;
+margin-right: 10px;
 }
 
 /* Style for the progress bar */
 .progress-bar {
-    width: 100%;
-    height: 20px;
-    background-color: #f2f2f2;
-    border-radius: 10px;
-    overflow: hidden;
+width: 100%;
+height: 20px;
+background-color: #f2f2f2;
+border-radius: 10px;
+overflow: hidden;
 }
 
 .progress-bar .progress {
-    height: 100%;
-    background-color: #4caf50;
-    border-radius: 10px;
-    transition: width 0.5s ease-in-out;
+height: 100%;
+background-color: #4caf50;
+border-radius: 10px;
+transition: width 0.5s ease-in-out;
 }
 {% endblock %}
 
 
 {% block content %}
 <div class="row">
-    <div class="col m2 list-container collection" style="max-height: 88vh;">
-        <div>
+    <div class="col m2 list-container collection">
+        <!-- Sticky search box -->
+        <div class="search-wrapper">
             <form action="/app" method="GET">
                 <input type="text" name="query" placeholder="Search for a Pokémon">
-                <button type="submit" class="black-text white waves-effect waves-light btn-small" style="border: 1px solid black;">Search</button>
+                <button type="submit" class="black-text white waves-effect waves-light btn-small"
+                    style="border: 1px solid black;">
+                    Search
+                </button>
             </form>
         </div>
-        <!-- List of all 801 pokemon -->
-        <ul>
-            {% for pokemon in list_of_pokemon %}
-            <li>
-                <a id="poke-{{ pokemon.pokemon_id }}" class="collection-item black-text {% if selected_pokemon_id == pokemon.pokemon_id %}active white-text{% endif %}" href="/app/{{pokemon.pokemon_id }}">{{ pokemon.pokedex_number }} | {{pokemon.name}}</a>
-            </li>
-            {% endfor %}
-        </ul>
+
+        <!-- Scrollable Pokémon list -->
+        <div class="pokemon-list-wrapper">
+            <ul class="collection">
+                {% for pokemon in list_of_pokemon %}
+                <li>
+                    <a id="poke-{{ pokemon.pokemon_id }}" class="collection-item black-text
+                    {% if selected_pokemon_id == pokemon.pokemon_id %} active white-text{% endif %}"
+                        href="/app/{{ pokemon.pokemon_id }}">
+                        {{ pokemon.pokedex_number }} | {{ pokemon.name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
     <div class="row">
@@ -109,10 +148,13 @@ background-color: #E53935;
 
             <p class="text-center">Selected Pokemon</p>
             {% if pokemon %}
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png" alt="Pokemon Sprite">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+                alt="Pokemon Sprite">
             <div>
                 <!-- Show pokemon details here -->
-                <span class="card-title" style="color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }}; text-shadow: 1px 1px 2px rgba(0,0,0,0.6); font-size: 32px">{{pokemon.name }}</span>
+                <span class="card-title"
+                    style="color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }}; text-shadow: 1px 1px 2px rgba(0,0,0,0.6); font-size: 32px">{{pokemon.name
+                    }}</span>
                 <p>Type1: {{ pokemon.type1 }}</p>
                 <p>Type2: {{ pokemon.type2 }}</p>
                 <p>Weight: {{ pokemon.weight }}</p>
@@ -123,16 +165,17 @@ background-color: #E53935;
                             <label for="nickname">Nickname</label>
                         </div>
                         <div>
-                            <input id="pokemon_name" type="text" name="nickname" class="validate" placeholder="Nickname" required>
+                            <input id="pokemon_name" type="text" name="nickname" class="validate" placeholder="Nickname"
+                                required>
                         </div>
                     </div>
                     <input id="captureBtn" type="submit" class="waves-effect waves-light btn-small" value="Capture">
                 </form>
             </div>
             {% endif %}
-    
+
         </div>
-    
+
         <div id="pokemon-detail-table" class="col m6">
             <p class="text-center">Your Pokemon</p>
             <table class="responsive-table" id="pokemon-table">
@@ -158,7 +201,9 @@ background-color: #E53935;
                                             <label for="new_name_{{ userpokemon.id }}">New Name</label>
                                         </div>
                                         <div>
-                                            <input id="new_name_{{ userpokemon.id }}" type="text" name="new_name_{{ userpokemon.id }}" class="validate" placeholder="New Name" required>
+                                            <input id="new_name_{{ userpokemon.id }}" type="text"
+                                                name="new_name_{{ userpokemon.id }}" class="validate"
+                                                placeholder="New Name" required>
                                         </div>
                                     </div>
                                     <input type="submit" class="waves-effect waves-light btn-small" value="Rename">
@@ -182,7 +227,8 @@ background-color: #E53935;
         <div id="pokemon-arena-detail" class="row">
             <p class="text-center">Selected Pokemon</p>
             {% if pokemon %}
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png" alt="Pokemon Sprite">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+                alt="Pokemon Sprite">
             <div>
                 <!-- Show pokemon details here -->
                 <span class="card-title">{{ pokemon.name }}</span>
@@ -203,7 +249,8 @@ background-color: #E53935;
                             <label for="dmg_to_pkmn">Damage to pokemon</label>
                         </div>
                         <div>
-                            <input id="attack_pokemon" type="text" name="dmg_to_pkmn" class="validate" placeholder="dmg_to_pkmn" required>
+                            <input id="attack_pokemon" type="text" name="dmg_to_pkmn" class="validate"
+                                placeholder="dmg_to_pkmn" required>
                         </div>
                     </div>
                     <input id="attackBtn" type="submit" class="waves-effect waves-light btn-small" value="Attack">
@@ -213,14 +260,14 @@ background-color: #E53935;
             {% endif %}
         </div>
     </div>
-    
+
 
 </div>
 
 
 <script>
     // JavaScript code to update the HP progress bar dynamically
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const arenaHpProgress = document.getElementById("arena-hp-progress");
         const arenaHp = document.getElementById("arena-hp");
         const attackForm = document.getElementById("attackForm");
@@ -239,7 +286,7 @@ background-color: #E53935;
         }
 
         // Event listener for the attack button
-        attackForm.addEventListener("submit", function() {
+        attackForm.addEventListener("submit", function () {
             const damage = parseInt(attackPokemonInput.value);
             const currentHp = parseInt(arenaHp.innerText);
             const newHp = currentHp - damage;

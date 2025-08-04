@@ -324,14 +324,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const togglePassword = document.querySelector('.toggle-password');
   const loginBtn = document.querySelector('.login-btn');
   
-  // Password visibility toggle
   togglePassword.addEventListener('click', function() {
     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordInput.setAttribute('type', type);
     this.textContent = type === 'password' ? 'visibility_off' : 'visibility';
   });
   
-  // Form validation
   function validateInput(input, errorElement, validationFn, errorMessage) {
     const isValid = validationFn(input.value);
     if (isValid) {
@@ -347,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
     return isValid;
   }
   
-  // Real-time validation
   usernameInput.addEventListener('blur', function() {
     validateInput(
       this,
@@ -366,7 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
     );
   });
   
-  // Form submission with loading state
   form.addEventListener('submit', function(e) {
     const isUsernameValid = validateInput(
       usernameInput,
@@ -387,13 +383,11 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Add loading state
     loginBtn.classList.add('loading');
     loginBtn.querySelector('.btn-text').textContent = 'Signing In...';
     loginBtn.disabled = true;
   });
   
-  // Input focus animations
   const inputs = document.querySelectorAll('.enhanced-input-field input');
   inputs.forEach(input => {
     input.addEventListener('focus', function() {
@@ -405,7 +399,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Add smooth entrance animation
   const loginCard = document.querySelector('.login-card');
   loginCard.style.opacity = '0';
   loginCard.style.transform = 'translateY(30px)';

@@ -33,15 +33,14 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     pokemon = db.relationship('UserPokemon', backref='user')
+    messages = db.relationship('Message', backref='sender', lazy=True)
 
     def __init__(self, username, email, password):
         self.username = username
         self.email = email
         self.set_password(password)
     
-
     def catch_pokemon(self, pokemon_id, name):
-        # Use session.get to avoid legacy Query.get warning
         poke = db.session.get(Pokemon, pokemon_id)
         if poke:
             try:
@@ -55,7 +54,6 @@ class User(db.Model):
         return None
 
     def release_pokemon(self, poke_id):
-        # Use session.get instead of Query.get
         poke = db.session.get(UserPokemon, poke_id)
         if poke and poke.user_id == self.id:
             db.session.delete(poke)
@@ -64,7 +62,6 @@ class User(db.Model):
         return None
 
     def rename_pokemon(self, poke_id, name):
-        # Use session.get instead of Query.get
         poke = db.session.get(UserPokemon, poke_id)
         if poke and poke.user_id == self.id:
             poke.name = name
@@ -83,7 +80,6 @@ class User(db.Model):
     
     def __repr__(self):
         return f'<User {self.id}: {self.username}>'
-
 
     def get_json(self):
         return {
@@ -129,4 +125,25 @@ class Pokemon(db.Model):
             'generation': self.generation,
             'classification': self.classification,
             'abilities': self.abilities.split(',') if self.abilities else [],
+        }
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    room = db.Column(db.String(100), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+
+    def __repr__(self):
+        return f'<Message {self.id} from {self.sender_id} in {self.room}>'
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'username': self.sender.username if self.sender else None,
+            'room': self.room,
+            'text': self.text,
+            'timestamp': self.timestamp.isoformat()
         }
