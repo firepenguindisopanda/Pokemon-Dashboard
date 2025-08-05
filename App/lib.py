@@ -527,11 +527,11 @@ class PokemonAnalytics:
         
         return optimal_pokemon
 
-    def recommend_team(self, preferences):
+    def recommend_team(self, preferences=None):
         """
         Recommend a team of 6 Pokemon based on user preferences
         Args:
-            preferences (dict): User preferences for team composition
+            preferences (dict): User preferences for team composition (all optional)
                 - playstyle: 'offensive', 'defensive', 'balanced', 'speed'
                 - preferred_types: list of preferred types (optional)
                 - generation_preference: preferred generation range (optional)
@@ -544,14 +544,28 @@ class PokemonAnalytics:
         if self.cleaned_data is None:
             raise ValueError("Data must be cleaned first using clean_data()")
         
+        # Handle case where no preferences are provided
+        if preferences is None:
+            preferences = {}
+        
         df = self.cleaned_data.copy()
         
         # Filter based on preferences
         filtered_df = df.copy()
         
-        # Filter by legendary preference
-        if not preferences.get('include_legendary', True):
+        # Filter by legendary preference (default to include some legendaries but not dominated)
+        include_legendary = preferences.get('include_legendary')
+        if include_legendary is False:
+            # Explicitly exclude legendaries
             filtered_df = filtered_df[filtered_df['is_legendary'] == False]
+        elif include_legendary is True:
+            # Include legendaries (no filtering)
+            pass
+        else:
+            # Default behavior: allow legendaries but prefer non-legendaries (80/20 split)
+            if len(filtered_df[filtered_df['is_legendary'] == False]) >= 6:
+                # If we have enough non-legendaries, favor them but allow some legendaries
+                pass  # Use full dataset with bias in selection later
         
         # Filter by generation preference
         if 'generation_preference' in preferences:
@@ -592,7 +606,7 @@ class PokemonAnalytics:
                 filtered_df['attack'] * 0.2 + 
                 filtered_df['sp_attack'] * 0.2
             )
-        else:  # balanced
+        else:  # balanced (default)
             # Balanced approach using base_total
             filtered_df['role_score'] = filtered_df['base_total']
         
@@ -635,13 +649,29 @@ class PokemonAnalytics:
             if len(available_df) == 0:
                 continue
             
-            # Adjust selection based on difficulty level
+            # Apply legendary bias if no explicit preference
+            include_legendary = preferences.get('include_legendary')
+            if include_legendary is None:
+                # Apply smart legendary selection: max 1-2 legendaries per team
+                legendary_count = sum(1 for p in recommended_team if p.get('is_legendary', False))
+                if legendary_count >= 2:
+                    # Limit legendaries to 2 max
+                    available_df = available_df[available_df['is_legendary'] == False]
+                elif legendary_count == 0 and len(recommended_team) >= 3:
+                    # Allow 1 legendary after we have some team members
+                    legendary_candidates = available_df[available_df['is_legendary'] == True]
+                    if len(legendary_candidates) > 0 and np.random.random() < 0.3:
+                        # 30% chance to pick a legendary
+                        available_df = legendary_candidates
+            
+            # Adjust selection based on difficulty level (default: intermediate)
             difficulty = preferences.get('difficulty_level', 'intermediate')
             if difficulty == 'beginner':
-                # Prefer Pokemon with higher capture rates (easier to catch)
+                # Prefer Pokemon with higher capture rates (easier to catch) and lower overall stats
+                available_df = available_df[available_df['base_total'] <= 500]  # Cap power level
                 available_df['final_score'] = (
-                    available_df['current_role_score'] * 0.7 + 
-                    available_df['capture_rate'] * 0.3
+                    available_df['current_role_score'] * 0.6 + 
+                    available_df['capture_rate'] * 0.4
                 )
             elif difficulty == 'advanced':
                 # Focus purely on performance

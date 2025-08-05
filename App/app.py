@@ -85,6 +85,14 @@ def initialize_db():
         row['type2'] = None
 
       abilities_list = eval(row['abilities'])
+      
+      # Handle complex capture_rate values like "30 (Meteorite)255 (Core)"
+      capture_rate_str = row['capture_rate'].strip()
+      if '(' in capture_rate_str:
+        # Extract the first number before any parentheses
+        capture_rate = int(capture_rate_str.split('(')[0].strip())
+      else:
+        capture_rate = int(capture_rate_str)
 
       # Create the Pokemon object and associate it with the abilities
       pokemon = Pokemon(
@@ -103,6 +111,10 @@ def initialize_db():
                 generation=row['generation'], 
                 classification=row['classification'],
                 abilities=','.join(abilities_list),
+                capture_rate=capture_rate,
+                is_legendary=int(row['is_legendary']),
+                percentage_male=float(row['percentage_male']) if row['percentage_male'] else 50.0,
+                base_total=int(row['base_total'])
             )
       db.session.add(pokemon)
 
@@ -127,16 +139,12 @@ def get_pokemon_list():
   return all_pokemon
 
 def search_pokemon_by_name(query):
-  # Query the database for Pokémon matching the search query
   matching_pokemon = Pokemon.query.filter(Pokemon.name.ilike(f'%{query}%')).all()
-  # Convert the matching Pokémon to JSON format
   results = [pokemon.get_json() for pokemon in matching_pokemon]
   return results
 
 def filter_pokemon_by_generation(generation):
-  # Query the database for Pokémon belonging to the specified generation
   matching_pokemon = Pokemon.query.filter_by(generation=generation).all()
-  # Convert the matching Pokémon to JSON format
   results = [pokemon.get_json() for pokemon in matching_pokemon]
   return results
 
@@ -282,8 +290,6 @@ def rename_action(pokemon_id):
   print('Pokemon Id: ', pokemon_id)
   form_id = 'new_name_' + str(pokemon_id)
   new_name = request.form.get(form_id)
-  
-  # Find the user's Pokémon to rename
   user_pokemon = db.session.get(UserPokemon, pokemon_id)
   
   print('Specific Pokemon: ', user_pokemon.id)
@@ -303,12 +309,14 @@ def initialize_pokemon_analytics():
     """Initialize the analytics instance with your Pokemon data"""
     global pokemon_analytics
     try:
-        # Load data from your existing Pokemon table
         all_pokemon = Pokemon.query.all()
         
         # Convert to DataFrame format
         pokemon_data = []
         for pokemon in all_pokemon:
+            # Calculate num_abilities from abilities string
+            abilities_count = len(pokemon.abilities.split(',')) if pokemon.abilities else 1
+            
             pokemon_dict = {
                 'name': pokemon.name,
                 'pokedex_number': pokemon.pokedex_number,
@@ -318,8 +326,7 @@ def initialize_pokemon_analytics():
                 'sp_attack': pokemon.sp_attack,
                 'sp_defense': pokemon.sp_defense,
                 'speed': pokemon.speed,
-                'base_total': (pokemon.hp + pokemon.attack + pokemon.defense + 
-                             pokemon.sp_attack + pokemon.sp_defense + pokemon.speed),
+                'base_total': pokemon.base_total,
                 'type1': pokemon.type1,
                 'type2': pokemon.type2 if pokemon.type2 else 'None',
                 'generation': pokemon.generation,
@@ -327,9 +334,10 @@ def initialize_pokemon_analytics():
                 'weight_kg': pokemon.weight if pokemon.weight else 10.0,
                 'classification': pokemon.classification,
                 'abilities': pokemon.abilities,
-                'capture_rate': 45,  # Default value since not in your schema
-                'is_legendary': 0,   # Default value since not in your schema
-                'percentage_male': 50.0  # Default value
+                'capture_rate': pokemon.capture_rate,
+                'is_legendary': pokemon.is_legendary,
+                'percentage_male': pokemon.percentage_male,
+                'num_abilities': abilities_count
             }
             pokemon_data.append(pokemon_dict)
         
@@ -446,6 +454,36 @@ def optimize_pokemon_build():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/pokemon-analytics/team-recommend", methods=['POST'])
+@jwt_required()
+def recommend_pokemon_team():
+    """Get team recommendations based on user preferences"""
+    global pokemon_analytics
+    if not pokemon_analytics:
+        if not initialize_pokemon_analytics():
+            return jsonify({"error": "Failed to initialize analytics"}), 500
+    
+    try:
+        # Handle case where no JSON body is provided
+        preferences = request.json if request.json else {}
+        
+        # Validate preferences structure
+        if not isinstance(preferences, dict):
+            return jsonify({"error": "Invalid preferences format"}), 400
+        
+        # Log the received preferences for debugging
+        print(f"Received team recommendation preferences: {preferences}")
+        
+        team_recommendations = pokemon_analytics.recommend_team(preferences)
+        return jsonify(team_recommendations)
+    except ValueError as e:
+        # Handle specific validation errors
+        return jsonify({"error": f"Validation error: {str(e)}"}), 400
+    except Exception as e:
+        # Handle general errors
+        print(f"Error in team recommendation: {str(e)}")
+        return jsonify({"error": f"Failed to generate team recommendation: {str(e)}"}), 500
+
 @app.route("/api/pokemon-analytics/model-performance", methods=['GET'])
 @jwt_required()
 def get_model_performance():
@@ -471,7 +509,7 @@ def pokemon_analytics_dashboard():
     if not pokemon_analytics:
         initialize_pokemon_analytics()
     
-    return render_template("pokemon_dashboard.html")
+    return render_template("pokemon_dashboard.html", type_colors=type_colors)
 
 def get_combined_type_distribution():
   type_counts = {}

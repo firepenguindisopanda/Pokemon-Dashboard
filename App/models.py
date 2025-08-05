@@ -106,6 +106,10 @@ class Pokemon(db.Model):
     generation = db.Column(db.Integer, nullable=False)
     classification = db.Column(db.String(255), nullable=False)
     abilities = db.Column(db.String(255))
+    capture_rate = db.Column(db.Integer, default=45)
+    is_legendary = db.Column(db.Integer, default=0)
+    percentage_male = db.Column(db.Float, default=50.0)
+    base_total = db.Column(db.Integer)
 
     def get_json(self):
         return {
@@ -125,6 +129,10 @@ class Pokemon(db.Model):
             'generation': self.generation,
             'classification': self.classification,
             'abilities': self.abilities.split(',') if self.abilities else [],
+            'capture_rate': self.capture_rate,
+            'is_legendary': self.is_legendary,
+            'percentage_male': self.percentage_male,
+            'base_total': self.base_total
         }
 
 

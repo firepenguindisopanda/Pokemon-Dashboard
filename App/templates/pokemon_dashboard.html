@@ -20,31 +20,21 @@
 "dark": "#705848"
 } %}
 
-{% block title %}Home{% endblock %}
+{% block title %}Pokemon Analytics Dashboard{% endblock %}
 
-{% block page %}Home{% endblock %}
+{% block page %}Pokemon Analytics Dashboard{% endblock %}
 
 {% block link%}
 <ul id="nav-mobile" class="right">
     <li><a href="/app">Home</a></li>
     <li><a href="/pokemon-area">Pokemon Area</a></li>
-    <li><a href="/pokemon-stats">Pokemon dashboard</a></li>
-    <li><a href="#">Pokemon Sandbox</a></li>
+    <li><a href="/pokemon-stats">Pokemon Dashboard</a></li>
     <li><a href="/logout">Logout</a></li>
 </ul>
 {% endblock %}
 
-{% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokemon Analytics Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * {
+{% block styles %}
+* {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -80,6 +70,38 @@
             opacity: 0.9;
         }
 
+        .dashboard-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tab-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab-button:hover, .tab-button.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -106,20 +128,172 @@
             display: flex;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 2px solid #f0f0f0;
         }
 
         .card-icon {
             font-size: 1.5rem;
-            margin-right: 12px;
+            margin-right: 10px;
             color: #667eea;
         }
 
         .card-title {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 600;
             color: #333;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .team-builder {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .pokemon-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .pokemon-card:hover {
+            transform: scale(1.02);
+            border-color: #667eea;
+        }
+
+        .pokemon-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .pokemon-role {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .pokemon-types {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .type-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .pokemon-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .stat-mini {
+            text-align: center;
+        }
+
+        .stat-mini-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-mini-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
         }
 
         .loading {
@@ -131,8 +305,6 @@
         .loading i {
             font-size: 2rem;
             animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-            display: block;
         }
 
         @keyframes spin {
@@ -140,33 +312,22 @@
             100% { transform: rotate(360deg); }
         }
 
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-item {
-            text-align: center;
+        .error {
+            background: #f8d7da;
+            color: #721c24;
             padding: 15px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 10px;
-            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
         }
 
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
         }
 
         .chart-container {
@@ -175,468 +336,434 @@
             margin-top: 20px;
         }
 
-        .chart-container.large {
-            height: 400px;
-        }
-
-        .prediction-form {
+        .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-size: 0.9rem;
-            color: #555;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .form-group input, .form-group select {
-            padding: 10px;
-            border: 2px solid #e0e0e0;
+        .info-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.1);
             border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
         }
 
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Team Builder Styles */
+        .form-text {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .theme-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .btn-theme {
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-theme:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-theme.active {
+            background: #667eea;
+            color: white;
             border-color: #667eea;
         }
 
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .btn-theme[onclick*="random"] {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
             color: white;
-            border: none;
-            padding: 12px 25px;
+            border-color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        .btn-theme[onclick*="random"]:hover {
+            background: linear-gradient(45deg, #ff5252, #ff7043);
+            transform: translateY(-1px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
             border-radius: 8px;
             font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            font-weight: 500;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .prediction-result {
-            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            display: none;
-        }
-
-        .cluster-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 4px solid #667eea;
-        }
-
-        .cluster-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .cluster-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            font-size: 0.9rem;
-        }
-
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border: 1px solid #f5c6cb;
-        }
-
-        .top-pokemon {
-            display: grid;
-            gap: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .pokemon-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .pokemon-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .pokemon-stat {
-            color: #667eea;
-            font-weight: 500;
-        }
-
-        .refresh-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #667eea;
-            color: white;
-            border: none;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            background-color: white;
             transition: all 0.3s ease;
+            color: #333;
         }
 
-        .refresh-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .prediction-form {
-                grid-template-columns: 1fr;
-            }
+        .form-control:hover {
+            border-color: #c3c8d1;
         }
+
+        select.form-control {
+            cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%23667eea' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 12px 15px;
+            padding-right: 40px;
+        }
+
+        select.form-control[multiple] {
+            background-image: none;
+            padding-right: 15px;
+            min-height: 120px;
+        }
+
+        select.form-control option {
+            padding: 8px;
+        }
+
+        select.form-control option:checked {
+            background-color: #667eea;
+            color: white;
+        }
+{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Analytics Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-chart-line"></i> Pokemon Analytics Dashboard</h1>
-            <p>Advanced insights and predictions for your Pokemon data</p>
+            <p>Advanced Pokemon analysis and team building tools</p>
         </div>
 
-        <div class="dashboard-grid">
-            <!-- Descriptive Statistics Card -->
+        <div class="dashboard-tabs">
+            <button class="tab-button active" onclick="showTab('overview')">
+                <i class="fas fa-chart-pie"></i> Overview
+            </button>
+            <button class="tab-button" onclick="showTab('team-builder')">
+                <i class="fas fa-users"></i> Team Builder
+            </button>
+            <button class="tab-button" onclick="showTab('analytics')">
+                <i class="fas fa-brain"></i> Analytics
+            </button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-database card-icon"></i>
+                        <span class="card-title">Total Pokemon</span>
+                    </div>
+                    <div class="stat-value" id="total-pokemon">-</div>
+                    <div class="stat-label">In Database</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-crown card-icon"></i>
+                        <span class="card-title">Legendary Pokemon</span>
+                    </div>
+                    <div class="stat-value" id="legendary-count">-</div>
+                    <div class="stat-label">Special Pokemon</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-star card-icon"></i>
+                        <span class="card-title">Average Base Total</span>
+                    </div>
+                    <div class="stat-value" id="avg-base-total">-</div>
+                    <div class="stat-label">Stat Points</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-layer-group card-icon"></i>
+                        <span class="card-title">Generations</span>
+                    </div>
+                    <div class="stat-value" id="generation-count">-</div>
+                    <div class="stat-label">Available</div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <i class="fas fa-chart-bar card-icon"></i>
-                    <h2 class="card-title">Overview Statistics</h2>
-                </div>
-                <div id="descriptive-stats" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Loading statistics...</div>
-                </div>
-            </div>
-
-            <!-- Type Distribution Chart -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-pie-chart card-icon"></i>
-                    <h2 class="card-title">Type Distribution</h2>
+                    <span class="card-title">Type Distribution</span>
                 </div>
                 <div class="chart-container">
-                    <canvas id="typeChart"></canvas>
+                    <canvas id="type-chart"></canvas>
                 </div>
             </div>
+        </div>
 
-            <!-- Generation Statistics -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-layer-group card-icon"></i>
-                    <h2 class="card-title">Generation Analysis</h2>
-                </div>
-                <div class="chart-container">
-                    <canvas id="generationChart"></canvas>
-                </div>
-            </div>
+        <!-- Team Builder Tab -->
+        <div id="team-builder" class="tab-content">
+            <div class="team-builder">
+                <h2><i class="fas fa-users"></i> Build Your Dream Team</h2>
+                <p>Configure your preferences and get AI-powered team recommendations. <strong>All fields are completely optional</strong> - leave everything blank to generate a totally random team, or fill in only the preferences you care about!</p>
 
-            <!-- Correlation Heatmap -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-project-diagram card-icon"></i>
-                    <h2 class="card-title">Stat Correlations</h2>
-                </div>
-                <div id="correlations" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Loading correlations...</div>
-                </div>
-            </div>
+                <form id="team-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Playstyle (Optional)</label>
+                            <select class="form-control" id="playstyle">
+                                <option value="">Any Playstyle</option>
+                                <option value="balanced">Balanced</option>
+                                <option value="offensive">Offensive</option>
+                                <option value="defensive">Defensive</option>
+                                <option value="speed">Speed-focused</option>
+                            </select>
+                            <small class="form-text">Choose a battle strategy or leave blank for balanced approach</small>
+                        </div>
 
-            <!-- Top Pokemon Lists -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-trophy card-icon"></i>
-                    <h2 class="card-title">Top Pokemon</h2>
-                </div>
-                <div id="top-pokemon" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Loading top Pokemon...</div>
-                </div>
-            </div>
+                        <div class="form-group">
+                            <label class="form-label">Difficulty Level (Optional)</label>
+                            <select class="form-control" id="difficulty">
+                                <option value="">Auto-select</option>
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                            <small class="form-text">Affects Pokemon selection criteria and catchability</small>
+                        </div>
+                    </div>
 
-            <!-- Clustering Analysis -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-object-group card-icon"></i>
-                    <h2 class="card-title">Pokemon Clusters</h2>
-                </div>
-                <div>
-                    <label for="clusterCount">Number of Clusters:</label>
-                    <select id="clusterCount" onchange="loadClustering()">
-                        <option value="3">3 Clusters</option>
-                        <option value="4">4 Clusters</option>
-                        <option value="5" selected>5 Clusters</option>
-                        <option value="6">6 Clusters</option>
-                        <option value="7">7 Clusters</option>
-                    </select>
-                </div>
-                <div id="clustering-results" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Loading clustering analysis...</div>
-                </div>
-            </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Generation Preference (Optional)</label>
+                            <select class="form-control" id="generation">
+                                <option value="">Any Generation</option>
+                                <option value="1,1">Generation 1 (Classic)</option>
+                                <option value="1,2">Generation 1-2 (Classic Era)</option>
+                                <option value="1,3">Generation 1-3 (Early Era)</option>
+                                <option value="4,6">Generation 4-6 (Modern Era)</option>
+                                <option value="7,8">Generation 7-8 (Latest Era)</option>
+                            </select>
+                            <small class="form-text">Limit to specific Pokemon generations</small>
+                        </div>
 
-            <!-- Pokemon Predictor -->
-            <div class="card" style="grid-column: 1 / -1;">
-                <div class="card-header">
-                    <i class="fas fa-magic card-icon"></i>
-                    <h2 class="card-title">Pokemon Performance Predictor</h2>
-                </div>
-                <form class="prediction-form" onsubmit="predictPokemon(event)">
-                    <div class="form-group">
-                        <label for="hp">HP:</label>
-                        <input type="number" id="hp" value="80" min="1" max="255" required>
+                        <div class="form-group">
+                            <label class="form-label">Include Legendaries (Optional)</label>
+                            <select class="form-control" id="include-legendary">
+                                <option value="">Auto-decide</option>
+                                <option value="false">No Legendaries</option>
+                                <option value="true">Include Legendaries</option>
+                            </select>
+                            <small class="form-text">Whether to include rare legendary Pokemon</small>
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label for="attack">Attack:</label>
-                        <input type="number" id="attack" value="80" min="1" max="255" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="defense">Defense:</label>
-                        <input type="number" id="defense" value="80" min="1" max="255" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sp_attack">Sp. Attack:</label>
-                        <input type="number" id="sp_attack" value="80" min="1" max="255" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sp_defense">Sp. Defense:</label>
-                        <input type="number" id="sp_defense" value="80" min="1" max="255" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="speed">Speed:</label>
-                        <input type="number" id="speed" value="80" min="1" max="255" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="type1">Primary Type:</label>
-                        <select id="type1" required>
-                            <option value="normal">Normal</option>
+                        <label class="form-label">Preferred Types (Optional)</label>
+                        <select class="form-control" id="preferred-types" multiple>
+                            <option value="grass">Grass</option>
                             <option value="fire">Fire</option>
                             <option value="water">Water</option>
                             <option value="electric">Electric</option>
-                            <option value="grass">Grass</option>
-                            <option value="ice">Ice</option>
-                            <option value="fighting">Fighting</option>
-                            <option value="poison">Poison</option>
-                            <option value="ground">Ground</option>
-                            <option value="flying">Flying</option>
                             <option value="psychic">Psychic</option>
-                            <option value="bug">Bug</option>
-                            <option value="rock">Rock</option>
-                            <option value="ghost">Ghost</option>
                             <option value="dragon">Dragon</option>
                             <option value="dark">Dark</option>
                             <option value="steel">Steel</option>
                             <option value="fairy">Fairy</option>
+                            <option value="fighting">Fighting</option>
+                            <option value="poison">Poison</option>
+                            <option value="ground">Ground</option>
+                            <option value="flying">Flying</option>
+                            <option value="bug">Bug</option>
+                            <option value="rock">Rock</option>
+                            <option value="ghost">Ghost</option>
+                            <option value="ice">Ice</option>
+                            <option value="normal">Normal</option>
                         </select>
+                        <small class="form-text">Hold Ctrl/Cmd to select multiple types</small>
                     </div>
+
                     <div class="form-group">
-                        <label for="generation">Generation:</label>
-                        <select id="generation" required>
-                            <option value="1">Gen 1</option>
-                            <option value="2">Gen 2</option>
-                            <option value="3">Gen 3</option>
-                            <option value="4">Gen 4</option>
-                            <option value="5">Gen 5</option>
-                            <option value="6">Gen 6</option>
-                            <option value="7">Gen 7</option>
-                            <option value="8">Gen 8</option>
-                        </select>
+                        <label class="form-label">Quick Theme Selection (Optional)</label>
+                        <div class="theme-buttons">
+                            <button type="button" class="btn btn-theme" onclick="setTheme('random')">Random Team</button>
+                            <button type="button" class="btn btn-theme" onclick="setTheme('legendary')">Legendary Team</button>
+                            <button type="button" class="btn btn-theme" onclick="setTheme('classic')">Classic Gen 1</button>
+                            <button type="button" class="btn btn-theme" onclick="setTheme('beginner')">Beginner-Friendly</button>
+                            <button type="button" class="btn btn-theme" onclick="setTheme('competitive')">Competitive</button>
+                        </div>
+                        <small class="form-text">Or select a pre-configured theme</small>
                     </div>
-                    <div class="form-group" style="align-self: end;">
-                        <button type="submit" class="btn">
-                            <i class="fas fa-crystal-ball"></i> Predict Performance
+
+                    <button type="submit" class="btn" id="generate-team-btn">
+                        <i class="fas fa-magic"></i> Generate Team
+                    </button>
+                </form>
+
+                <div id="team-result" style="display: none;">
+                    <h3>Your Recommended Team</h3>
+                    <div id="team-container" class="team-grid"></div>
+                    
+                    <div class="info-grid" id="team-analysis"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-robot card-icon"></i>
+                        <span class="card-title">Optimal Pokemon Build</span>
+                    </div>
+                    <div id="optimal-build-container">
+                        <button class="btn" onclick="loadOptimalBuild()">
+                            <i class="fas fa-cog"></i> Calculate Optimal Build
                         </button>
                     </div>
-                </form>
-                <div id="prediction-result" class="prediction-result"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line card-icon"></i>
+                        <span class="card-title">Model Performance</span>
+                    </div>
+                    <div id="model-performance-container">
+                        <button class="btn" onclick="loadModelPerformance()">
+                            <i class="fas fa-analytics"></i> View Model Stats
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Optimal Build -->
             <div class="card">
                 <div class="card-header">
-                    <i class="fas fa-star card-icon"></i>
-                    <h2 class="card-title">Optimal Pokemon Build</h2>
+                    <i class="fas fa-search card-icon"></i>
+                    <span class="card-title">Clustering Analysis</span>
                 </div>
-                <div id="optimal-build" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Calculating optimal build...</div>
-                </div>
-            </div>
-
-            <!-- Model Performance -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-cogs card-icon"></i>
-                    <h2 class="card-title">Model Performance</h2>
-                </div>
-                <div id="model-performance" class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <div>Loading model metrics...</div>
+                <div id="clustering-container">
+                    <button class="btn" onclick="loadClustering()">
+                        <i class="fas fa-project-diagram"></i> Run Clustering Analysis
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <button class="refresh-btn" onclick="refreshDashboard()" title="Refresh Dashboard">
-        <i class="fas fa-sync-alt"></i>
-    </button>
-
     <script>
-        // Global variables for charts
-        let typeChart, generationChart;
+        let currentStats = {};
+        const typeColors = {{ type_colors | tojson }};
 
-        // Initialize dashboard on load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboard();
-        });
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
 
-        async function loadDashboard() {
-            try {
-                await Promise.all([
-                    loadDescriptiveStats(),
-                    loadDiagnostics(),
-                    loadClustering(),
-                    loadOptimalBuild(),
-                    loadModelPerformance()
-                ]);
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Load tab-specific data
+            if (tabName === 'overview' && Object.keys(currentStats).length === 0) {
+                loadOverviewData();
             }
         }
 
-        async function loadDescriptiveStats() {
+        // Load overview data
+        async function loadOverviewData() {
             try {
                 const response = await fetch('/api/pokemon-analytics/stats');
-                const data = await response.json();
+                if (!response.ok) throw new Error('Failed to load stats');
                 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                const data = await response.json();
+                currentStats = data;
 
-                displayDescriptiveStats(data);
+                // Update overview cards
+                document.getElementById('total-pokemon').textContent = data.total_pokemon;
+                document.getElementById('legendary-count').textContent = data.legendary_count;
+                document.getElementById('avg-base-total').textContent = Math.round(data.stat_averages.base_total);
+                document.getElementById('generation-count').textContent = Object.keys(data.generation_distribution).length;
+
+                // Create type distribution chart
                 createTypeChart(data.type_distribution);
-                createGenerationChart(data.generation_distribution);
-                displayTopPokemon(data);
+
             } catch (error) {
-                document.getElementById('descriptive-stats').innerHTML = 
-                    `<div class="error-message">Error loading statistics: ${error.message}</div>`;
+                console.error('Error loading overview data:', error);
+                showError('Failed to load overview data');
             }
         }
 
-        function displayDescriptiveStats(data) {
-            const statsHtml = `
-                <div class="stat-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${data.total_pokemon}</div>
-                        <div class="stat-label">Total Pokemon</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.legendary_count}</div>
-                        <div class="stat-label">Legendary</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${(data.legendary_rate * 100).toFixed(1)}%</div>
-                        <div class="stat-label">Legendary Rate</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${(data.dual_type_rate * 100).toFixed(1)}%</div>
-                        <div class="stat-label">Dual Type Rate</div>
-                    </div>
-                </div>
-                <div class="stat-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${data.stat_averages.base_total.toFixed(0)}</div>
-                        <div class="stat-label">Avg Base Total</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.stat_averages.attack.toFixed(0)}</div>
-                        <div class="stat-label">Avg Attack</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.stat_averages.speed.toFixed(0)}</div>
-                        <div class="stat-label">Avg Speed</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.physical_stats.avg_weight.toFixed(1)}kg</div>
-                        <div class="stat-label">Avg Weight</div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('descriptive-stats').innerHTML = statsHtml;
-        }
-
+        // Create type distribution chart
         function createTypeChart(typeData) {
-            const ctx = document.getElementById('typeChart').getContext('2d');
+            const ctx = document.getElementById('type-chart').getContext('2d');
             
-            if (typeChart) {
-                typeChart.destroy();
-            }
+            const labels = Object.keys(typeData);
+            const values = Object.values(typeData);
+            const colors = labels.map(type => typeColors[type] || '#CCCCCC');
 
-            const colors = {
-                normal: '#A8A878', fire: '#F08030', water: '#6890F0', electric: '#F8D030',
-                grass: '#78C850', ice: '#98D8D8', fighting: '#C03028', poison: '#A040A0',
-                ground: '#E0C068', flying: '#A890F0', psychic: '#F85888', bug: '#A8B820',
-                rock: '#B8A038', ghost: '#705898', dragon: '#7038F8', dark: '#705848',
-                steel: '#B8B8D0', fairy: '#EE99AC'
-            };
-
-            typeChart = new Chart(ctx, {
+            new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(typeData),
+                    labels: labels,
                     datasets: [{
-                        data: Object.values(typeData),
-                        backgroundColor: Object.keys(typeData).map(type => colors[type] || '#999999'),
+                        data: values,
+                        backgroundColor: colors,
                         borderWidth: 2,
                         borderColor: '#fff'
                     }]
@@ -648,8 +775,8 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                padding: 10,
-                                usePointStyle: true
+                                usePointStyle: true,
+                                padding: 20
                             }
                         }
                     }
@@ -657,308 +784,350 @@
             });
         }
 
-        function createGenerationChart(genData) {
-            const ctx = document.getElementById('generationChart').getContext('2d');
+        // Team Builder Form Submission
+        document.getElementById('team-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            if (generationChart) {
-                generationChart.destroy();
-            }
+            const btn = document.getElementById('generate-team-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            btn.disabled = true;
 
-            generationChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(genData).map(gen => `Gen ${gen}`),
-                    datasets: [{
-                        label: 'Pokemon Count',
-                        data: Object.values(genData),
-                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
-                        borderColor: 'rgba(102, 126, 234, 1)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
+            try {
+                // Start with minimal preferences - let backend handle defaults
+                const preferences = {};
+
+                // Only add playstyle if explicitly selected
+                const playstyle = document.getElementById('playstyle').value;
+                if (playstyle && playstyle.trim() !== '') {
+                    preferences.playstyle = playstyle;
+                }
+
+                // Only add difficulty if explicitly selected
+                const difficulty = document.getElementById('difficulty').value;
+                if (difficulty && difficulty.trim() !== '') {
+                    preferences.difficulty_level = difficulty;
+                }
+
+                // Only add legendary preference if explicitly set
+                const includeLegendary = document.getElementById('include-legendary').value;
+                if (includeLegendary && includeLegendary.trim() !== '') {
+                    preferences.include_legendary = includeLegendary === 'true';
+                }
+
+                // Add generation preference if selected
+                const generation = document.getElementById('generation').value;
+                if (generation && generation.trim() !== '') {
+                    try {
+                        const [min, max] = generation.split(',').map(Number);
+                        if (!isNaN(min) && !isNaN(max)) {
+                            preferences.generation_preference = [min, max];
                         }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+                    } catch (err) {
+                        console.warn('Invalid generation preference format:', generation);
                     }
                 }
-            });
-        }
 
-        function displayTopPokemon(data) {
-            const topPokemonHtml = `
-                <h4>Strongest Pokemon</h4>
-                <div class="top-pokemon">
-                    ${data.strongest_pokemon.slice(0, 5).map(pokemon => `
-                        <div class="pokemon-item">
-                            <span class="pokemon-name">${pokemon.name}</span>
-                            <span class="pokemon-stat">${pokemon.base_total}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <h4 style="margin-top: 20px;">Fastest Pokemon</h4>
-                <div class="top-pokemon">
-                    ${data.fastest_pokemon.slice(0, 5).map(pokemon => `
-                        <div class="pokemon-item">
-                            <span class="pokemon-name">${pokemon.name}</span>
-                            <span class="pokemon-stat">${pokemon.speed}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            document.getElementById('top-pokemon').innerHTML = topPokemonHtml;
-        }
-
-        async function loadDiagnostics() {
-            try {
-                const response = await fetch('/api/pokemon-analytics/diagnostics');
-                const data = await response.json();
+                // Add preferred types if selected
+                const preferredTypesSelect = document.getElementById('preferred-types');
+                const preferredTypes = Array.from(preferredTypesSelect.selectedOptions)
+                    .map(option => option.value)
+                    .filter(type => type && type.trim() !== '');
                 
-                if (data.error) {
-                    throw new Error(data.error);
+                if (preferredTypes.length > 0) {
+                    preferences.preferred_types = preferredTypes;
                 }
 
-                displayCorrelations(data.correlations);
-            } catch (error) {
-                document.getElementById('correlations').innerHTML = 
-                    `<div class="error-message">Error loading correlations: ${error.message}</div>`;
-            }
-        }
+                // Always enable team role balance for better team composition
+                preferences.team_role_balance = true;
 
-        function displayCorrelations(correlations) {
-            const sortedCorrelations = Object.entries(correlations)
-                .sort(([,a], [,b]) => Math.abs(b) - Math.abs(a))
-                .slice(0, 8);
+                console.log('Sending preferences:', preferences);
 
-            const correlationsHtml = `
-                <div style="max-height: 300px; overflow-y: auto;">
-                    ${sortedCorrelations.map(([stat, corr]) => `
-                        <div class="pokemon-item">
-                            <span class="pokemon-name">${stat.replace('_', ' ').toUpperCase()}</span>
-                            <span class="pokemon-stat" style="color: ${corr > 0 ? '#28a745' : '#dc3545'}">
-                                ${corr.toFixed(3)}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            document.getElementById('correlations').innerHTML = correlationsHtml;
-        }
-
-        async function loadClustering() {
-            try {
-                const clusters = document.getElementById('clusterCount').value;
-                const response = await fetch(`/api/pokemon-analytics/clustering?clusters=${clusters}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                displayClustering(data);
-            } catch (error) {
-                document.getElementById('clustering-results').innerHTML = 
-                    `<div class="error-message">Error loading clustering: ${error.message}</div>`;
-            }
-        }
-
-        function displayClustering(data) {
-            const clusterHtml = Object.entries(data.cluster_analysis).map(([clusterName, cluster]) => `
-                <div class="cluster-info">
-                    <div class="cluster-title">${clusterName.replace('_', ' ').toUpperCase()} (${cluster.size} Pokemon)</div>
-                    <div class="cluster-stats">
-                        <div>Legendary Rate: ${(cluster.legendary_rate * 100).toFixed(1)}%</div>
-                        <div>Avg Base Total: ${cluster.avg_base_total.toFixed(0)}</div>
-                        <div>Avg Attack: ${cluster.stats_profile.attack.toFixed(0)}</div>
-                        <div>Avg Speed: ${cluster.stats_profile.speed.toFixed(0)}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('clustering-results').innerHTML = clusterHtml;
-        }
-
-        async function predictPokemon(event) {
-            event.preventDefault();
-            
-            const formData = {
-                hp: parseInt(document.getElementById('hp').value),
-                attack: parseInt(document.getElementById('attack').value),
-                defense: parseInt(document.getElementById('defense').value),
-                sp_attack: parseInt(document.getElementById('sp_attack').value),
-                sp_defense: parseInt(document.getElementById('sp_defense').value),
-                speed: parseInt(document.getElementById('speed').value),
-                type1: document.getElementById('type1').value,
-                type2: 'None',
-                generation: parseInt(document.getElementById('generation').value),
-                height_m: 1.5,
-                weight_kg: 50.0,
-                capture_rate: 45,
-                num_abilities: 2
-            };
-
-            try {
-                const response = await fetch('/api/pokemon-analytics/predict', {
+                const response = await fetch('/api/pokemon-analytics/team-recommend', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(preferences)
                 });
 
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || 'Failed to generate team');
                 }
+                
+                const data = await response.json();
+                displayTeam(data);
 
-                displayPredictionResult(data);
             } catch (error) {
-                document.getElementById('prediction-result').innerHTML = 
-                    `<div class="error-message">Error making prediction: ${error.message}</div>`;
-                document.getElementById('prediction-result').style.display = 'block';
+                console.error('Error generating team:', error);
+                showError('Failed to generate team recommendation');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
-        }
+        });
 
-        function displayPredictionResult(data) {
-            const resultHtml = `
-                <h4><i class="fas fa-magic"></i> Prediction Results</h4>
-                ${data.legendary_prediction ? `
-                    <div style="margin: 15px 0;">
-                        <strong>Legendary Probability:</strong> 
-                        <span style="color: ${data.legendary_prediction.legendary_probability > 0.5 ? '#28a745' : '#dc3545'}; font-weight: bold;">
-                            ${(data.legendary_prediction.legendary_probability * 100).toFixed(1)}%
-                        </span>
-                    </div>
-                ` : ''}
-                ${data.stats_prediction ? `
-                    <div style="margin: 15px 0;">
-                        <strong>Predicted Base Total:</strong> 
-                        <span style="color: #667eea; font-weight: bold; font-size: 1.2rem;">
-                            ${data.stats_prediction.predicted_base_total.toFixed(0)}
-                        </span>
-                    </div>
-                ` : ''}
-            `;
+        // Display recommended team
+        function displayTeam(data) {
+            const container = document.getElementById('team-container');
+            const analysisContainer = document.getElementById('team-analysis');
             
-            document.getElementById('prediction-result').innerHTML = resultHtml;
-            document.getElementById('prediction-result').style.display = 'block';
+            // Clear previous results
+            container.innerHTML = '';
+            analysisContainer.innerHTML = '';
+
+            // Display team members
+            data.recommended_team.forEach(pokemon => {
+                const pokemonCard = document.createElement('div');
+                pokemonCard.className = 'pokemon-card';
+                
+                const type2Badge = pokemon.type2 ? 
+                    `<span class="type-badge" style="background-color: ${typeColors[pokemon.type2] || '#CCC'}">${pokemon.type2}</span>` : '';
+
+                pokemonCard.innerHTML = `
+                    <div class="pokemon-name">${pokemon.name}</div>
+                    <div class="pokemon-role">${pokemon.role}</div>
+                    <div class="pokemon-types">
+                        <span class="type-badge" style="background-color: ${typeColors[pokemon.type1] || '#CCC'}">${pokemon.type1}</span>
+                        ${type2Badge}
+                    </div>
+                    <div class="pokemon-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.hp}</div>
+                            <div class="stat-mini-label">HP</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.attack}</div>
+                            <div class="stat-mini-label">ATK</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.speed}</div>
+                            <div class="stat-mini-label">SPD</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.defense}</div>
+                            <div class="stat-mini-label">DEF</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.sp_attack}</div>
+                            <div class="stat-mini-label">SP.A</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value">${pokemon.stats.base_total}</div>
+                            <div class="stat-mini-label">TOTAL</div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(pokemonCard);
+            });
+
+            // Display team analysis
+            const analysis = data.team_analysis;
+            analysisContainer.innerHTML = `
+                <div class="info-item">
+                    <div class="info-value">${analysis.total_base_stats}</div>
+                    <div class="info-label">Total Base Stats</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${Math.round(analysis.average_base_total)}</div>
+                    <div class="info-label">Avg Base Total</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${analysis.legendary_count}</div>
+                    <div class="info-label">Legendaries</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${analysis.type_coverage.length}</div>
+                    <div class="info-label">Type Coverage</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value">${Math.round(analysis.synergy_score * 100)}%</div>
+                    <div class="info-label">Synergy Score</div>
+                </div>
+            `;
+
+            document.getElementById('team-result').style.display = 'block';
+            showSuccess('Team generated successfully!');
         }
 
+        // Load optimal build
         async function loadOptimalBuild() {
+            const container = document.getElementById('optimal-build-container');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Calculating...</div>';
+
             try {
                 const response = await fetch('/api/pokemon-analytics/optimize');
+                if (!response.ok) throw new Error('Failed to load optimal build');
+                
                 const data = await response.json();
                 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                container.innerHTML = `
+                    <h4>Optimal Pokemon Build</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-value">${data.hp}</div>
+                            <div class="info-label">HP</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${data.attack}</div>
+                            <div class="info-label">Attack</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${data.defense}</div>
+                            <div class="info-label">Defense</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${data.sp_attack}</div>
+                            <div class="info-label">Sp. Attack</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${data.sp_defense}</div>
+                            <div class="info-label">Sp. Defense</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${data.speed}</div>
+                            <div class="info-label">Speed</div>
+                        </div>
+                    </div>
+                    <p><strong>Predicted Base Total:</strong> ${data.predicted_base_total}</p>
+                `;
 
-                displayOptimalBuild(data);
             } catch (error) {
-                document.getElementById('optimal-build').innerHTML = 
-                    `<div class="error-message">Error loading optimal build: ${error.message}</div>`;
+                console.error('Error loading optimal build:', error);
+                container.innerHTML = '<div class="error">Failed to load optimal build</div>';
             }
         }
 
-        function displayOptimalBuild(data) {
-            const buildHtml = `
-                <div class="stat-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${data.hp}</div>
-                        <div class="stat-label">HP</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.attack}</div>
-                        <div class="stat-label">Attack</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.defense}</div>
-                        <div class="stat-label">Defense</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.sp_attack}</div>
-                        <div class="stat-label">Sp. Attack</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.sp_defense}</div>
-                        <div class="stat-label">Sp. Defense</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.speed}</div>
-                        <div class="stat-label">Speed</div>
-                    </div>
-                </div>
-                <div style="text-align: center; margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); border-radius: 10px;">
-                    <strong>Predicted Base Total: ${data.predicted_base_total}</strong>
-                </div>
-                <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
-                    <div>Generation: ${data.generation}</div>
-                    <div>Height: ${data.height_m}m</div>
-                    <div>Weight: ${data.weight_kg}kg</div>
-                </div>
-            `;
-            
-            document.getElementById('optimal-build').innerHTML = buildHtml;
-        }
-
+        // Load model performance
         async function loadModelPerformance() {
+            const container = document.getElementById('model-performance-container');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
             try {
                 const response = await fetch('/api/pokemon-analytics/model-performance');
+                if (!response.ok) throw new Error('Failed to load model performance');
+                
                 const data = await response.json();
                 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                container.innerHTML = `
+                    <h4>Model Performance</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-value">${Math.round(data.legendary_prediction.accuracy * 100)}%</div>
+                            <div class="info-label">Legendary Prediction Accuracy</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value">${Math.round(data.stats_prediction.r2_score * 100)}%</div>
+                            <div class="info-label">Stats Prediction R²</div>
+                        </div>
+                    </div>
+                `;
 
-                displayModelPerformance(data);
             } catch (error) {
-                document.getElementById('model-performance').innerHTML = 
-                    `<div class="error-message">Error loading model performance: ${error.message}</div>`;
+                console.error('Error loading model performance:', error);
+                container.innerHTML = '<div class="error">Failed to load model performance</div>';
             }
         }
 
-        function displayModelPerformance(data) {
-            const performanceHtml = `
-                ${data.legendary_prediction ? `
-                    <div class="stat-item" style="margin-bottom: 15px;">
-                        <div class="stat-value">${(data.legendary_prediction.accuracy * 100).toFixed(1)}%</div>
-                        <div class="stat-label">Legendary Prediction Accuracy</div>
-                    </div>
-                ` : ''}
-                ${data.stats_prediction ? `
-                    <div class="stat-item" style="margin-bottom: 15px;">
-                        <div class="stat-value">${data.stats_prediction.r2_score.toFixed(3)}</div>
-                        <div class="stat-label">Stats Prediction R² Score</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.stats_prediction.mse.toFixed(0)}</div>
-                        <div class="stat-label">Mean Squared Error</div>
-                    </div>
-                ` : ''}
-            `;
-            
-            document.getElementById('model-performance').innerHTML = performanceHtml;
+        // Load clustering analysis
+        async function loadClustering() {
+            const container = document.getElementById('clustering-container');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Running analysis...</div>';
+
+            try {
+                const response = await fetch('/api/pokemon-analytics/clustering?clusters=5');
+                if (!response.ok) throw new Error('Failed to load clustering');
+                
+                const data = await response.json();
+                
+                let html = '<h4>Pokemon Clusters</h4><div class="dashboard-grid">';
+                
+                Object.entries(data.cluster_analysis).forEach(([clusterName, cluster]) => {
+                    html += `
+                        <div class="card">
+                            <h5>${clusterName.replace('_', ' ').toUpperCase()}</h5>
+                            <p><strong>Size:</strong> ${cluster.size} Pokemon</p>
+                            <p><strong>Avg Base Total:</strong> ${Math.round(cluster.avg_base_total)}</p>
+                            <p><strong>Legendary Rate:</strong> ${Math.round(cluster.legendary_rate * 100)}%</p>
+                            <p><strong>Top Types:</strong> ${Object.keys(cluster.dominant_types).slice(0, 3).join(', ')}</p>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading clustering:', error);
+                container.innerHTML = '<div class="error">Failed to load clustering analysis</div>';
+            }
         }
 
-        function refreshDashboard() {
-            // Add spinning animation to refresh button
-            const btn = document.querySelector('.refresh-btn i');
-            btn.style.animation = 'spin 1s linear infinite';
-            
-            // Reload all data
-            loadDashboard().then(() => {
-                btn.style.animation = '';
-            });
+        // Utility functions
+        function showError(message) {
+            // You can implement a toast notification system here
+            console.error(message);
         }
+
+        function showSuccess(message) {
+            // You can implement a toast notification system here
+            console.log(message);
+        }
+
+        // Theme selection functions
+        function setTheme(theme) {
+            // Clear all selections first
+            document.getElementById('playstyle').value = '';
+            document.getElementById('difficulty').value = '';
+            document.getElementById('generation').value = '';
+            document.getElementById('include-legendary').value = '';
+            
+            // Clear multi-select properly
+            const typesSelect = document.getElementById('preferred-types');
+            for (let i = 0; i < typesSelect.options.length; i++) {
+                typesSelect.options[i].selected = false;
+            }
+
+            // Apply theme-specific settings
+            switch(theme) {
+                case 'random':
+                    // Leave everything empty for completely random team
+                    break;
+                case 'competitive':
+                    document.getElementById('playstyle').value = 'balanced';
+                    document.getElementById('difficulty').value = 'advanced';
+                    document.getElementById('include-legendary').value = 'false';
+                    break;
+                case 'beginner':
+                    document.getElementById('playstyle').value = 'balanced';
+                    document.getElementById('difficulty').value = 'beginner';
+                    document.getElementById('generation').value = '1,3';
+                    document.getElementById('include-legendary').value = 'false';
+                    break;
+                case 'legendary':
+                    document.getElementById('playstyle').value = 'offensive';
+                    document.getElementById('difficulty').value = 'advanced';
+                    document.getElementById('include-legendary').value = 'true';
+                    break;
+                case 'classic':
+                    document.getElementById('playstyle').value = 'balanced';
+                    document.getElementById('difficulty').value = 'intermediate';
+                    document.getElementById('generation').value = '1,1';
+                    document.getElementById('include-legendary').value = 'false';
+                    break;
+            }
+            
+            // Visual feedback
+            document.querySelectorAll('.btn-theme').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverviewData();
+        });
     </script>
 </body>
 </html>
