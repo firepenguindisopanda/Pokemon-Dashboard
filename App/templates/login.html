@@ -86,12 +86,14 @@
         <div class="form-floating mb-3">
           <input type="text" class="form-control" id="username" name="username" placeholder="Username" autocomplete="username" minlength="3" required>
           <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+          <div class="invalid-feedback">Username must be at least 3 characters</div>
         </div>
 
         <div class="form-floating mb-3 position-relative">
           <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="current-password" minlength="6" required>
           <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
-          <button type="button" class="password-toggle" id="togglePassword" tabindex="-1" aria-label="Toggle password visibility">
+          <div class="invalid-feedback">Password must be at least 6 characters</div>
+          <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
             <i class="fas fa-eye"></i>
           </button>
         </div>
