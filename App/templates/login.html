@@ -1,11 +1,10 @@
 {% extends "layout.html" %}
-{% block title %}Pokemon Dashboard App - Login{% endblock %}
-{% block page %}Pokemon Dashboard{% endblock %}
+{% block title %}Pokémon Dashboard - Login{% endblock %}
 
 {% block styles %}
-.login-container {
-  min-height: calc(100vh - 64px);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.login-page {
+  min-height: calc(100vh - 56px);
+  background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,400 +13,121 @@
   overflow: hidden;
 }
 
-.login-container::before {
+.login-page::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('/static/img/pexels-abhishek-rana-4188296.jpg') center/cover;
-  opacity: 0.1;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  animation: login-glow 8s ease-in-out infinite alternate;
   z-index: 1;
 }
 
+@keyframes login-glow {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-5%, -5%); }
+}
+
 .login-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px;
-  position: relative;
+  max-width: 420px;
+  border-radius: 4px;
   z-index: 2;
-  transform: translateY(0);
-  transition: all 0.3s ease;
 }
 
-.login-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 5;
+  color: #6c757d;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 30px;
+.password-toggle:hover {
+  color: #C62828;
 }
 
-.login-title {
-  font-size: 2.2em;
-  font-weight: 300;
-  color: #333;
-  margin-bottom: 8px;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.login-subtitle {
-  color: #666;
-  font-size: 1.1em;
-  font-weight: 300;
-}
-
-.pokemon-icon {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 20px;
-  background: linear-gradient(45deg, #667eea, #764ba2);
+.login-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #C62828, #E53935);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: 28px;
   color: white;
-  animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-10px);
-  }
-  60% {
-    transform: translateY(-5px);
-  }
-}
-
-.enhanced-input-field {
-  margin-bottom: 25px;
-  position: relative;
-}
-
-.enhanced-input-field input {
-  border: none;
-  border-bottom: 2px solid #e0e0e0;
-  border-radius: 0;
-  background: transparent;
-  font-size: 16px;
-  padding: 12px 0;
-  transition: all 0.3s ease;
-  box-shadow: none !important;
-}
-
-.enhanced-input-field input:focus {
-  border-bottom: 2px solid #667eea;
-  outline: none;
-}
-
-.enhanced-input-field label {
-  position: absolute;
-  top: 12px;
-  left: 0;
-  color: #999;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  pointer-events: none;
-}
-
-.enhanced-input-field input:focus + label,
-.enhanced-input-field input:not(:placeholder-shown) + label {
-  top: -20px;
-  font-size: 12px;
-  color: #667eea;
-  font-weight: 500;
-}
-
-.enhanced-input-field .input-icon {
-  position: absolute;
-  right: 0;
-  top: 12px;
-  color: #999;
-  transition: all 0.3s ease;
-}
-
-.enhanced-input-field input:focus ~ .input-icon {
-  color: #667eea;
-}
-
-.login-btn {
-  width: 100%;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 25px;
-  padding: 15px;
-  font-size: 16px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-.login-btn:hover {
-  background: linear-gradient(45deg, #764ba2, #667eea);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-.login-btn:active {
-  transform: translateY(0);
-}
-
-.signup-link {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.signup-link a {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.signup-link a::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -2px;
-  left: 50%;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  transition: all 0.3s ease;
-}
-
-.signup-link a:hover::after {
-  width: 100%;
-  left: 0;
-}
-
-.signup-link a:hover {
-  color: #764ba2;
-}
-
-.loading {
-  position: relative;
-  pointer-events: none;
-}
-
-.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid #ffffff;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@media only screen and (max-width: 480px) {
-  .login-card {
-    padding: 30px 20px;
-    margin: 10px;
-  }
-  
-  .login-title {
-    font-size: 1.8em;
-  }
-  
-  .pokemon-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 25px;
-  }
-}
-
-.enhanced-input-field input.valid {
-  border-bottom: 2px solid #4caf50;
-}
-
-.enhanced-input-field input.invalid {
-  border-bottom: 2px solid #f44336;
-}
-
-.error-message {
-  color: #f44336;
-  font-size: 12px;
-  margin-top: 5px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.error-message.show {
-  opacity: 1;
+  margin: 0 auto 16px;
 }
 {% endblock %}
 
 {% block content %}
-<div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <div class="pokemon-icon">
-        <i class="material-icons">catching_pokemon</i>
+<div class="login-page">
+  <div class="card login-card shadow">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <div class="login-icon">
+          <i class="fas fa-pokeball"></i>
+        </div>
+        <h4 class="fw-bold mb-1">Welcome Back!</h4>
+        <p class="text-muted small">Sign in to your Pokémon Dashboard</p>
       </div>
-      <h2 class="login-title">Welcome Back</h2>
-      <p class="login-subtitle">Sign in to your Pokemon Dashboard</p>
-    </div>
-    
-    <form id="loginForm" method="POST" action="/login">
-      <div class="enhanced-input-field">
-        <input 
-          type="text" 
-          id="username" 
-          name="username" 
-          required 
-          placeholder=" "
-          autocomplete="username"
-        >
-        <label for="username">Username</label>
-        <i class="material-icons input-icon">person</i>
-        <div class="error-message" id="username-error"></div>
-      </div>
-      
-      <div class="enhanced-input-field">
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          required 
-          placeholder=" "
-          autocomplete="current-password"
-        >
-        <label for="password">Password</label>
-        <i class="material-icons input-icon toggle-password" style="cursor: pointer;">visibility_off</i>
-        <div class="error-message" id="password-error"></div>
-      </div>
-      
-      <button type="submit" class="login-btn">
-        <span class="btn-text">Sign In</span>
-      </button>
-    </form>
-    
-    <div class="signup-link">
-      <p>Don't have an account? <a href="/signup">Create one here</a></p>
+
+      <form id="loginForm" method="POST" action="/login" novalidate>
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="username" name="username" placeholder="Username" autocomplete="username" minlength="3" required>
+          <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+        </div>
+
+        <div class="form-floating mb-3 position-relative">
+          <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="current-password" minlength="6" required>
+          <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+          <button type="button" class="password-toggle" id="togglePassword" tabindex="-1" aria-label="Toggle password visibility">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+
+        <button type="submit" class="btn btn-danger w-100 btn-lg" id="submitBtn">
+          <span id="btnText">Sign In</span>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+        </button>
+      </form>
+
+      <p class="text-center mt-4 mb-0 small">
+        Don't have an account? <a href="/signup" class="text-danger fw-bold">Create one here</a>
+      </p>
     </div>
   </div>
 </div>
+{% endblock %}
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('loginForm');
-  const usernameInput = document.getElementById('username');
-  const passwordInput = document.getElementById('password');
-  const togglePassword = document.querySelector('.toggle-password');
-  const loginBtn = document.querySelector('.login-btn');
-  
-  togglePassword.addEventListener('click', function() {
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    this.textContent = type === 'password' ? 'visibility_off' : 'visibility';
-  });
-  
-  function validateInput(input, errorElement, validationFn, errorMessage) {
-    const isValid = validationFn(input.value);
-    if (isValid) {
-      input.classList.remove('invalid');
-      input.classList.add('valid');
-      errorElement.classList.remove('show');
-    } else {
-      input.classList.remove('valid');
-      input.classList.add('invalid');
-      errorElement.textContent = errorMessage;
-      errorElement.classList.add('show');
-    }
-    return isValid;
+{% block scripts %}
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  if (!this.checkValidity()) {
+    e.preventDefault();
+    e.stopPropagation();
+  } else {
+    document.getElementById('btnText').textContent = 'Signing In...';
+    document.getElementById('btnSpinner').classList.remove('d-none');
+    document.getElementById('submitBtn').disabled = true;
   }
-  
-  usernameInput.addEventListener('blur', function() {
-    validateInput(
-      this,
-      document.getElementById('username-error'),
-      value => value.length >= 3,
-      'Username must be at least 3 characters long'
-    );
-  });
-  
-  passwordInput.addEventListener('blur', function() {
-    validateInput(
-      this,
-      document.getElementById('password-error'),
-      value => value.length >= 6,
-      'Password must be at least 6 characters long'
-    );
-  });
-  
-  form.addEventListener('submit', function(e) {
-    const isUsernameValid = validateInput(
-      usernameInput,
-      document.getElementById('username-error'),
-      value => value.length >= 3,
-      'Username must be at least 3 characters long'
-    );
-    
-    const isPasswordValid = validateInput(
-      passwordInput,
-      document.getElementById('password-error'),
-      value => value.length >= 6,
-      'Password must be at least 6 characters long'
-    );
-    
-    if (!isUsernameValid || !isPasswordValid) {
-      e.preventDefault();
-      return;
-    }
-    
-    loginBtn.classList.add('loading');
-    loginBtn.querySelector('.btn-text').textContent = 'Signing In...';
-    loginBtn.disabled = true;
-  });
-  
-  const inputs = document.querySelectorAll('.enhanced-input-field input');
-  inputs.forEach(input => {
-    input.addEventListener('focus', function() {
-      this.parentElement.style.transform = 'scale(1.02)';
-    });
-    
-    input.addEventListener('blur', function() {
-      this.parentElement.style.transform = 'scale(1)';
-    });
-  });
-  
-  const loginCard = document.querySelector('.login-card');
-  loginCard.style.opacity = '0';
-  loginCard.style.transform = 'translateY(30px)';
-  
-  setTimeout(() => {
-    loginCard.style.transition = 'all 0.6s ease';
-    loginCard.style.opacity = '1';
-    loginCard.style.transform = 'translateY(0)';
-  }, 100);
+  this.classList.add('was-validated');
 });
-</script>
+
+document.getElementById('togglePassword').addEventListener('click', function() {
+  const input = document.getElementById('password');
+  const icon = this.querySelector('i');
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  icon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+});
 {% endblock %}
