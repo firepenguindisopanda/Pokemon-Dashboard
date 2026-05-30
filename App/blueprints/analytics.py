@@ -73,7 +73,9 @@ def initialize_pokemon_analytics():
         return True
     except Exception as e:
         analytics_error = str(e)
-        logger.error(f"Error initializing analytics: {e}")
+        # Warning level because this can happen on first startup before DB is initialized
+        # (e.g., "no such table: pokemon"). ensure_analytics() will retry when needed.
+        logger.warning("Analytics initialization deferred (DB not ready): %s", e)
         return False
 
 
