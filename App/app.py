@@ -68,11 +68,11 @@ def user_lookup_callback(_jwt_header, jwt_data):
   return db.session.get(User, identity)
 
 @app.context_processor
-def inject_current_user():
+def inject_context():
     try:
-        return dict(current_user=current_user)
+        return dict(current_user=current_user, now=datetime.datetime.now)
     except Exception:
-        return dict(current_user=None)
+        return dict(current_user=None, now=datetime.datetime.now)
 
 # *************************************
 
