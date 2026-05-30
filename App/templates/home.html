@@ -1,310 +1,256 @@
 {% extends "layout.html" %}
 
 {% set type_colors = {
-"grass": "#78C850",
-"fire": "#F08030",
-"water": "#6890F0",
-"bug": "#A8B820",
-"normal": "#A8A878",
-"poison": "#A040A0",
-"electric": "#F8D030",
-"ground": "#E0C068",
-"fairy": "#EE99AC",
-"fighting": "#C03028",
-"psychic": "#F85888",
-"rock": "#B8A038",
-"ghost": "#705898",
-"ice": "#98D8D8",
-"dragon": "#7038F8",
-"flying": "#A890F0",
-"steel": "#B8B8D0",
-"dark": "#705848"
+  "grass": "#78C850", "fire": "#F08030", "water": "#6890F0",
+  "bug": "#A8B820", "normal": "#A8A878", "poison": "#A040A0",
+  "electric": "#F8D030", "ground": "#E0C068", "fairy": "#EE99AC",
+  "fighting": "#C03028", "psychic": "#F85888", "rock": "#B8A038",
+  "ghost": "#705898", "ice": "#98D8D8", "dragon": "#7038F8",
+  "flying": "#A890F0", "steel": "#B8B8D0", "dark": "#705848"
 } %}
 
 {% block title %}Home{% endblock %}
 
-{% block page %}Home{% endblock %}
-
-{% block link%}
-<ul id="nav-mobile" class="right">
-    <li><a href="/app">Home</a></li>
-    <li><a href="/pokemon-area">Pokemon Area</a></li>
-    <li><a href="/pokemon-stats">Pokemon dashboard</a></li>
-    <li><a href="#">Pokemon Sandbox</a></li>
-    <li><a href="/logout">Logout</a></li>
-</ul>
-{% endblock %}
-
-{% block styles%}
-
-td{
-padding: 2px;
-}
-
-.list-container {
-  display: flex;
-  flex-direction: column;
-  max-height: 88vh; 
-  border-right: 1px solid #ddd; 
-}
-
-.search-wrapper {
-  flex: 0 0 auto;
-  position: sticky;
-  top: 0;
-  background: white;  
-  padding: 8px;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-
-.pokemon-list-wrapper {
-  flex: 1 1 auto;
-  overflow-y: auto;
-}
-
-.pokemon-list-wrapper .collection {
-  margin: 0;
-  border: none;
-}
-
-.collection .collection-item.active{
-background-color: #E53935;
-}
-#pokemon-detail p:nth-child(2) {
-/* Add your CSS styles here */
-color: blue; /* For example, changing text color to blue */
-}
-.action-buttons {
-display: flex;
-align-items: center;
-justify-content: space-evenly;
-}
-
-.button-form {
-margin-bottom: 0;
-}
-
-.button-container {
-display: flex;
-align-items: center;
-}
-
-.input-field {
-margin-right: 10px;
-}
-
-/* Style for the progress bar */
-.progress-bar {
-width: 100%;
-height: 20px;
-background-color: #f2f2f2;
-border-radius: 10px;
-overflow: hidden;
-}
-
-.progress-bar .progress {
-height: 100%;
-background-color: #4caf50;
-border-radius: 10px;
-transition: width 0.5s ease-in-out;
-}
-{% endblock %}
-
-
 {% block content %}
-<div class="row">
-    <div class="col m2 list-container collection">
-        <!-- Sticky search box -->
-        <div class="search-wrapper">
-            <form action="/app" method="GET">
-                <input type="text" name="query" placeholder="Search for a Pokémon">
-                <button type="submit" class="black-text white waves-effect waves-light btn-small"
-                    style="border: 1px solid black;">
-                    Search
-                </button>
-            </form>
-        </div>
+<div class="container-fluid py-3">
 
-        <!-- Scrollable Pokémon list -->
-        <div class="pokemon-list-wrapper">
-            <ul class="collection">
-                {% for pokemon in list_of_pokemon %}
-                <li>
-                    <a id="poke-{{ pokemon.pokemon_id }}" class="collection-item black-text
-                    {% if selected_pokemon_id == pokemon.pokemon_id %} active white-text{% endif %}"
-                        href="/app/{{ pokemon.pokemon_id }}">
-                        {{ pokemon.pokedex_number }} | {{ pokemon.name }}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
+  <form action="/app" method="GET" class="mb-4">
+    <div class="input-group">
+      <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+      <input type="text" name="query" class="form-control" placeholder="Search Pokémon..." value="{{ request.args.get('query', '') }}">
+      {% if request.args.get('query') %}
+      <a href="/app" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
+      {% endif %}
+    </div>
+  </form>
+
+  <div class="row g-3">
+
+    <!-- Col 1: Pokémon list (image, name, types) -->
+    <div class="col-12 col-lg-3 col-xl-3">
+      <div class="card card-type-accent">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-bold"><i class="fas fa-pokeball me-2"></i>Pokémon</span>
+          <span class="badge bg-pokemon">{{ list_of_pokemon|length }}</span>
         </div>
+        <div class="pokemon-list-scroll">
+          <div class="list-group list-group-flush">
+            {% for p in list_of_pokemon %}
+            <a href="/app/{{ p.pokemon_id }}"
+               class="list-group-item list-group-item-action d-flex align-items-center{% if selected_pokemon_id == p.pokemon_id %} active{% endif %}">
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ p.pokemon_id }}.png"
+                   alt="{{ p.name }}" width="40" height="40" loading="lazy" class="me-2">
+              <span>#{{ '%03d' % p.pokedex_number }} {{ p.name }}</span>
+              <span class="ms-auto">
+                <span class="type-badge type-badge-sm type-{{ p.type1.lower() }}">{{ p.type1 }}</span>
+                {% if p.type2 %}
+                <span class="type-badge type-badge-sm type-{{ p.type2.lower() }} ms-1">{{ p.type2 }}</span>
+                {% endif %}
+              </span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div id="pokemon-detail" class="col m3">
-
-            <p class="text-center">Selected Pokemon</p>
-            {% if pokemon %}
+    <!-- Col 2: Wide detail panel (important view) -->
+    <div class="col-12 col-lg-5 col-xl-5">
+      <div class="card card-type-accent">
+        <div class="card-body text-center">
+          {% if pokemon %}
+          <div class="sprite-glow mx-auto mb-3">
             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
-                alt="Pokemon Sprite">
-            <div>
-                <!-- Show pokemon details here -->
-                <span class="card-title"
-                    style="color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }}; text-shadow: 1px 1px 2px rgba(0,0,0,0.6); font-size: 32px">{{pokemon.name
-                    }}</span>
-                <p>Type1: {{ pokemon.type1 }}</p>
-                <p>Type2: {{ pokemon.type2 }}</p>
-                <p>Weight: {{ pokemon.weight }}</p>
-                <p>Height: {{ pokemon.height }}</p>
-                <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
-                    <div class="input-field">
-                        <div>
-                            <label for="nickname">Nickname</label>
-                        </div>
-                        <div>
-                            <input id="pokemon_name" type="text" name="nickname" class="validate" placeholder="Nickname"
-                                required>
-                        </div>
-                    </div>
-                    <input id="captureBtn" type="submit" class="waves-effect waves-light btn-small" value="Capture">
-                </form>
-            </div>
+                 alt="{{ pokemon.name }}" style="width: 150px; height: 150px;">
+          </div>
+          <h4 class="fw-bold" style="color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }};">
+            {{ pokemon.name }}
+          </h4>
+          <div class="mb-3">
+            {% if pokemon.type1 %}
+            <span class="type-badge type-{{ pokemon.type1.lower() }} me-1">{{ pokemon.type1 }}</span>
             {% endif %}
-
-        </div>
-
-        <div id="pokemon-detail-table" class="col m6">
-            <p class="text-center">Your Pokemon</p>
-            <table class="responsive-table" id="pokemon-table">
-                <!-- Captured pokemon content here -->
-                <thead>
-                    <tr>
-                        <th>Pokemon</th>
-                        <th>Name</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- show captured pokemon here with controls to rename and release for each pokemon -->
-                    {% for userpokemon in usr_pkmons %}
-                    <tr id="{{ userpokemon.name }}-row">
-                        <td>{{ userpokemon.species }}</td>
-                        <td>{{ userpokemon.name }}</td>
-                        <td class="action-buttons">
-                            <form action="/rename-pokemon/{{ userpokemon.id }}" method="POST" class="button-form">
-                                <div id="rename-{{ userpokemon.name }}" class="button-container">
-                                    <div class="input-field">
-                                        <div>
-                                            <label for="new_name_{{ userpokemon.id }}">New Name</label>
-                                        </div>
-                                        <div>
-                                            <input id="new_name_{{ userpokemon.id }}" type="text"
-                                                name="new_name_{{ userpokemon.id }}" class="validate"
-                                                placeholder="New Name" required>
-                                        </div>
-                                    </div>
-                                    <input type="submit" class="waves-effect waves-light btn-small" value="Rename">
-                                </div>
-                            </form>
-                            <form action="/release-pokemon/{{ userpokemon.id }}" method="POST" class="button-form">
-                                <div id="release-{{ userpokemon.name }}" class="button-container">
-                                    <input type="submit" class="waves-effect waves-light btn-small" value="Release">
-                                </div>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="container" style="border: 1px solid red;">
-        <!-- This should be below pokemon-detail-table and pokemon-detail -->
-        <h2 class="bold">Pokemon Arena (Work In Progress)</h2>
-        <div id="pokemon-arena-detail" class="row">
-            <p class="text-center">Selected Pokemon</p>
-            {% if pokemon %}
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
-                alt="Pokemon Sprite">
-            <div>
-                <!-- Show pokemon details here -->
-                <span class="card-title">{{ pokemon.name }}</span>
-                <div class="progress-bar">
-                    <div id="arena-hp-progress" class="progress progress-bar"></div> <!-- Arena HP Progress bar -->
-                </div>
-                <p>Pokedex #: {{ pokemon.pokedex_number }}</p>
-                <p>Generation: {{ pokemon.generation }}</p>
-                <p>HP: <span id="arena-hp">{{ pokemon.hp }}</span></p>
-                <p>Type1: {{ pokemon.type1 }}</p>
-                <p>Type2: {{ pokemon.type2 }}</p>
-                <p>Weight: {{ pokemon.weight }}</p>
-                <p>Height: {{ pokemon.height }}</p>
-                <p>Abilities: {{ pokemon.abilities }}</p>
-                <form id="attackForm" onsubmit="return false;">
-                    <div class="input-field">
-                        <div>
-                            <label for="dmg_to_pkmn">Damage to pokemon</label>
-                        </div>
-                        <div>
-                            <input id="attack_pokemon" type="text" name="dmg_to_pkmn" class="validate"
-                                placeholder="dmg_to_pkmn" required>
-                        </div>
-                    </div>
-                    <input id="attackBtn" type="submit" class="waves-effect waves-light btn-small" value="Attack">
-                    <input id="pokeballBtn" type="submit" class="waves-effect waves-light btn-small" value="Pokeball">
-                </form>
-            </div>
+            {% if pokemon.type2 %}
+            <span class="type-badge type-{{ pokemon.type2.lower() }}">{{ pokemon.type2 }}</span>
             {% endif %}
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6"><small class="text-muted">Weight:</small> {{ pokemon.weight }}</div>
+            <div class="col-6"><small class="text-muted">Height:</small> {{ pokemon.height }}</div>
+            <div class="col-12">
+              <small class="text-muted">Abilities:</small>
+              {% if pokemon.abilities is iterable and pokemon.abilities is not string %}
+                {{ pokemon.abilities | join(', ') }}
+              {% else %}
+                {{ pokemon.abilities }}
+              {% endif %}
+            </div>
+          </div>
+          <hr>
+          <div class="text-start">
+            {% set stat_list = [
+              ('HP', pokemon.hp), ('ATK', pokemon.attack), ('DEF', pokemon.defense),
+              ('SATK', pokemon.sp_attack), ('SDEF', pokemon.sp_defense), ('SPD', pokemon.speed)
+            ] %}
+            {% for label, value in stat_list %}
+            <div class="mb-1">
+              <div class="d-flex justify-content-between">
+                <span class="small fw-bold">{{ label }}</span>
+                <span class="small">{{ value }}</span>
+              </div>
+              <div class="stat-bar">
+                <div class="stat-fill" style="width: {{ (value / 255 * 100) | round }}%; background: {{ type_colors.get(pokemon.type1.lower(), '#C62828') }};"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <hr>
+          <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
+            <div class="input-group">
+              <input type="text" name="nickname" class="form-control" placeholder="Nickname" required>
+              <button type="submit" class="btn btn-danger"><i class="fas fa-plus-circle me-1"></i>Capture</button>
+            </div>
+          </form>
+          {% else %}
+          <div class="py-5">
+            <i class="fas fa-paw fa-4x text-muted mb-3"></i>
+            <p class="text-muted fs-5">Select a Pokémon</p>
+          </div>
+          {% endif %}
         </div>
+      </div>
     </div>
 
+    <!-- Col 3: Your Pokémon + Arena -->
+    <div class="col-12 col-lg-4">
+      <div class="card card-type-accent mb-3">
+        <div class="card-header fw-bold">
+          <i class="fas fa-users me-2"></i>Your Pokémon
+        </div>
+        <div class="card-body p-0">
+          {% if usr_pkmons %}
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Pokémon</th>
+                <th>Name</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for up in usr_pkmons %}
+              <tr id="user-pokemon-{{ up.id }}">
+                <td class="align-middle">
+                  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ up.pokemon_id }}.png"
+                       alt="{{ up.species }}" width="40" height="40" class="me-2">
+                  {{ up.species }}
+                </td>
+                <td class="align-middle">{{ up.name }}</td>
+                <td class="align-middle">
+                  <div class="d-flex align-items-center gap-1 w-100">
+                    <input type="text" name="new_name_{{ up.id }}" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required>
+                    <button type="submit" form="rename-{{ up.id }}" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>
+                    <button type="submit" form="release-{{ up.id }}" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>
+                  </div>
+                  <form id="rename-{{ up.id }}" action="/rename-pokemon/{{ up.id }}" method="POST" class="d-none"></form>
+                  <form id="release-{{ up.id }}" action="/release-pokemon/{{ up.id }}" method="POST" class="d-none"></form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-4">
+            <p class="text-muted mb-0"><i class="fas fa-paw"></i> No Pokémon captured yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
 
+      <div class="card card-type-accent">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         data-bs-toggle="collapse" data-bs-target="#arenaCollapse"
+         role="button" aria-expanded="false" aria-controls="arenaCollapse">
+      <span class="fw-bold"><i class="fas fa-shield-alt me-2"></i>Pokémon Arena</span>
+      <i class="fas fa-chevron-down arena-chevron"></i>
+    </div>
+    <div id="arenaCollapse" class="collapse">
+      <div class="card-body text-center">
+        {% if arena_pokemon %}
+        <div class="sprite-glow mx-auto mb-3">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ arena_pokemon.pokemon_id }}.png"
+               alt="{{ arena_pokemon.name }}" style="width: 120px; height: 120px;">
+        </div>
+        <h5 class="fw-bold">{{ arena_pokemon.name }}</h5>
+        <div class="mb-2" style="max-width: 400px; margin: 0 auto;">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small fw-bold">HP</span>
+            <span class="small" id="arena-hp-text">{{ arena_pokemon.hp }}</span>
+          </div>
+          <div class="stat-bar" style="height: 24px;">
+            <div id="arena-hp-bar" class="stat-fill bg-success"
+                 style="width: 100%;" role="progressbar"
+                 aria-valuenow="{{ arena_pokemon.hp }}"
+                 aria-valuemin="0" aria-valuemax="{{ arena_pokemon.hp }}"></div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-center gap-2 mt-3">
+          <button id="arenaAttackBtn" class="btn btn-danger"><i class="fas fa-fist-raised me-1"></i>Attack</button>
+          <button id="arenaHealBtn" class="btn btn-success"><i class="fas fa-heart me-1"></i>Heal</button>
+          <button id="arenaResetBtn" class="btn btn-secondary"><i class="fas fa-undo me-1"></i>Reset</button>
+        </div>
+        {% else %}
+        <div class="py-4">
+          <i class="fas fa-paw fa-3x text-muted mb-2"></i>
+          <p class="text-muted">Capture a Pokémon to battle in the Arena!</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
-
+{% block scripts %}
 <script>
-    // JavaScript code to update the HP progress bar dynamically
-    document.addEventListener("DOMContentLoaded", function () {
-        const arenaHpProgress = document.getElementById("arena-hp-progress");
-        const arenaHp = document.getElementById("arena-hp");
-        const attackForm = document.getElementById("attackForm");
-        const attackPokemonInput = document.getElementById("attack_pokemon");
+document.addEventListener("DOMContentLoaded", function () {
+  const hpBar = document.getElementById("arena-hp-bar");
+  const hpText = document.getElementById("arena-hp-text");
+  if (!hpBar) return;
 
-        // Set initial HP bar width based on the initial HP of the Pokémon
-        updateHpBar(parseInt(arenaHp.innerText));
+  const totalHp = parseInt(hpText.textContent);
+  let currentHp = totalHp;
 
-        // Function to update HP bar width
-        function updateHpBar(currentHp) {
-            const totalHp = parseInt(arenaHp.innerText);
-            const hpPercentage = (currentHp / totalHp) * 100;
-            // Ensure HP percentage does not exceed 100%
-            const clampedHpPercentage = Math.min(hpPercentage, 100);
-            arenaHpProgress.style.width = clampedHpPercentage + "%";
-        }
+  function updateArenaHp(newHp) {
+    currentHp = Math.max(0, Math.min(newHp, totalHp));
+    const pct = (currentHp / totalHp) * 100;
+    hpText.textContent = currentHp;
+    hpBar.style.width = pct + "%";
+    hpBar.setAttribute("aria-valuenow", currentHp);
 
-        // Event listener for the attack button
-        attackForm.addEventListener("submit", function () {
-            const damage = parseInt(attackPokemonInput.value);
-            const currentHp = parseInt(arenaHp.innerText);
-            const newHp = currentHp - damage;
+    hpBar.className = "stat-fill";
+    if (pct > 50) {
+      hpBar.classList.add("bg-success");
+    } else if (pct > 25) {
+      hpBar.classList.add("bg-warning");
+    } else {
+      hpBar.classList.add("bg-danger");
+    }
+  }
 
-            // Ensure new HP is within valid range (0 to total HP)
-            const totalHp = parseInt(arenaHp.innerText);
-            const clampedHp = Math.max(0, Math.min(newHp, totalHp));
+  document.getElementById("arenaAttackBtn").addEventListener("click", function () {
+    const dmg = Math.floor(Math.random() * 20) + 10;
+    updateArenaHp(currentHp - dmg);
+  });
 
-            // Update HP bar and display new HP value
-            updateHpBar(clampedHp);
-            arenaHp.innerText = clampedHp;
+  document.getElementById("arenaHealBtn").addEventListener("click", function () {
+    const heal = Math.floor(Math.random() * 15) + 10;
+    updateArenaHp(currentHp + heal);
+  });
 
-            // Reset input field
-            attackPokemonInput.value = "";
-
-            // Prevent form submission
-            return false;
-        });
-    });
+  document.getElementById("arenaResetBtn").addEventListener("click", function () {
+    updateArenaHp(totalHp);
+  });
+});
 </script>
 {% endblock %}

@@ -5,6 +5,12 @@ db = SQLAlchemy()
 
 
 class UserPokemon(db.Model):
+    __tablename__ = 'user_pokemon'
+    __table_args__ = (
+        db.Index('ix_user_pokemon_user_id', 'user_id'),
+        db.Index('ix_user_pokemon_pokemon_id', 'pokemon_id'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     pokemon_id = db.Column(db.Integer, db.ForeignKey('pokemon.id'))
@@ -22,6 +28,7 @@ class UserPokemon(db.Model):
     def get_json(self):
         return {
             'id': self.id,
+            'pokemon_id': self.pokemon_id,
             'name': self.name,
             'species': self.pokemon.name
         }
@@ -90,6 +97,17 @@ class User(db.Model):
 
 
 class Pokemon(db.Model):
+    __tablename__ = 'pokemon'
+    __table_args__ = (
+        db.Index('ix_pokemon_name', 'name'),
+        db.Index('ix_pokemon_type1', 'type1'),
+        db.Index('ix_pokemon_type2', 'type2'),
+        db.Index('ix_pokemon_generation', 'generation'),
+        db.Index('ix_pokemon_is_legendary', 'is_legendary'),
+        db.Index('ix_pokemon_type1_generation', 'type1', 'generation'),
+        db.Index('ix_pokemon_type1_type2', 'type1', 'type2'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     pokedex_number = db.Column(db.Integer, nullable=False)
@@ -110,6 +128,9 @@ class Pokemon(db.Model):
     is_legendary = db.Column(db.Integer, default=0)
     percentage_male = db.Column(db.Float, default=50.0)
     base_total = db.Column(db.Integer)
+    base_egg_steps = db.Column(db.Integer, default=0)
+    base_happiness = db.Column(db.Integer, default=0)
+    experience_growth = db.Column(db.Integer, default=0)
 
     def get_json(self):
         return {
@@ -132,7 +153,10 @@ class Pokemon(db.Model):
             'capture_rate': self.capture_rate,
             'is_legendary': self.is_legendary,
             'percentage_male': self.percentage_male,
-            'base_total': self.base_total
+            'base_total': self.base_total,
+            'base_egg_steps': self.base_egg_steps,
+            'base_happiness': self.base_happiness,
+            'experience_growth': self.experience_growth
         }
 
 

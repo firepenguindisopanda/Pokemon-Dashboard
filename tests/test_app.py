@@ -2,14 +2,54 @@ import os
 import tempfile
 import pytest
 from flask import url_for
+from sqlalchemy import create_engine
 
-from App.app import app, db, initialize_db
+from App.app import app, db
+from App.blueprints.auth import initialize_db
 from App.models import User, UserPokemon, Pokemon
+
+
+@pytest.fixture(autouse=True)
+def _use_sqlite():
+    """Override the database to use a temporary SQLite file for all tests.
+    
+    This replaces the NeonDB/PostgreSQL engine at the Flask-SQLAlchemy
+    extension level so tests run locally without any external database.
+    """
+    db_fd, db_path = tempfile.mkstemp()
+    sqlite_uri = f"sqlite:///{db_path}"
+    
+    # Store original config to restore later
+    orig_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
+    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
+    app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False
+    
+    # Directly replace the engine at the extension level (needs app context)
+    with app.app_context():
+        test_engine = create_engine(sqlite_uri)
+        if 'sqlalchemy' in app.extensions:
+            ext = app.extensions['sqlalchemy']
+            # Dispose old engines
+            for key in list(ext.engines.keys()):
+                ext.engines[key].dispose()
+            # Register the new SQLite engine
+            ext.engines[None] = test_engine
+    
+    yield
+    
+    # Cleanup
+    test_engine.dispose()
+    with app.app_context():
+        if 'sqlalchemy' in app.extensions:
+            app.extensions['sqlalchemy'].engines.pop(None, None)
+    app.config['SQLALCHEMY_DATABASE_URI'] = orig_uri
+    os.close(db_fd)
+    os.unlink(db_path)
+
 
 @pytest.fixture
 def client():
-    db_fd, db_path = tempfile.mkstemp()
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
     client = app.test_client()
@@ -17,11 +57,8 @@ def client():
     with app.app_context():
         db.create_all()
         initialize_db()
-
+    
     yield client
-
-    os.close(db_fd)
-    os.unlink(db_path)
 
 def login(client, username, password):
     return client.post(
@@ -71,14 +108,24 @@ def test_user_catch_release_rename_model_methods(client):
         assert db.session.get(UserPokemon, up.id) is None
 
 def test_signup_and_login_flow(client):
-    """Test that signup creates a user and login issues a cookie."""
+    """Test that signup creates a user and login issues BOTH cookies."""
     # signup a new user
     rv = signup(client, 'newuser', 'n@u.com', 'pw123')
     assert b'Account created' in rv.data
 
+    # Verify both cookies are set after signup
+    cookies = {c.name: c.value for c in client.cookie_jar}
+    assert 'access_token' in cookies
+    assert 'refresh_token' in cookies, "Signup should set refresh_token cookie"
+
     # login with that user
     rv2 = login(client, 'newuser', 'pw123')
     assert b'Logged in successfully.' in rv2.data
+
+    # Verify refresh token is set after login too
+    cookies2 = {c.name: c.value for c in client.cookie_jar}
+    assert 'access_token' in cookies2
+    assert 'refresh_token' in cookies2, "Login should set refresh_token cookie"
 
     # protected route should now be accessible
     rv3 = client.get('/pokemon-area', follow_redirects=True)
@@ -103,9 +150,9 @@ def test_capture_release_via_client(client):
     rv2 = client.get('/app', follow_redirects=True)
     assert b'TestNick' in rv2.data
 
-    # release the pokemon
+    # release the pokemon (bob has 2 seeded Pokémon + model test consumes id=3)
     rv3 = client.post(
-        '/release-pokemon/2',
+        '/release-pokemon/4',
         headers={'Referer': '/'},
         follow_redirects=True
     )

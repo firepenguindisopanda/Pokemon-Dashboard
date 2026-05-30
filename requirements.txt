@@ -24,3 +24,5 @@ numpy
 pandas
 scipy
 scikit-learn
+pydantic-settings
+psycopg2-binary

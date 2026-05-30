@@ -14,12 +14,12 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100" style="background: var(--pokemon-bg);">
-  {% set public_endpoints = ['login_page', 'signup_page', 'init_route'] %}
+  {% set public_endpoints = ['auth.login_page', 'auth.signup_page', 'auth.init_route'] %}
   {% set is_auth = request.endpoint not in public_endpoints %}
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-pokemon">
     <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{% if is_auth %}{{ url_for('home_page') }}{% else %}#{% endif %}">
+      <a class="navbar-brand fw-bold" href="{% if is_auth %}{{ url_for('pokemon.home_page') }}{% else %}#{% endif %}">
         <i class="fas fa-pokeball"></i> Pokémon Dashboard
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -29,16 +29,16 @@
         {% if is_auth %}
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
-            <a class="nav-link{% if request.endpoint == 'home_page' %} active{% endif %}" href="{{ url_for('home_page') }}">Home</a>
+            <a class="nav-link{% if request.endpoint == 'pokemon.home_page' %} active{% endif %}" href="{{ url_for('pokemon.home_page') }}">Home</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link{% if request.endpoint in ('pokemon_area', 'pokemon_area_details') %} active{% endif %}" href="{{ url_for('pokemon_area') }}">Pokémon Area</a>
+            <a class="nav-link{% if request.endpoint in ('pokemon.pokemon_area', 'pokemon.pokemon_area_details') %} active{% endif %}" href="{{ url_for('pokemon.pokemon_area') }}">Pokémon Area</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link{% if request.endpoint in ('pokemon_analytics_dashboard', 'pokemon_stats') %} active{% endif %}" href="{{ url_for('pokemon_analytics_dashboard') }}">Dashboard</a>
+            <a class="nav-link{% if request.endpoint in ('analytics.pokemon_analytics_dashboard', 'analytics.pokemon_stats') %} active{% endif %}" href="{{ url_for('analytics.pokemon_analytics_dashboard') }}">Dashboard</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Sandbox</a>
+            <a class="nav-link{% if request.endpoint == 'analytics.pokemon_ml_playground' %} active{% endif %}" href="{{ url_for('analytics.pokemon_ml_playground') }}">ML Playground</a>
           </li>
         </ul>
         <ul class="navbar-nav">
@@ -47,7 +47,7 @@
               <i class="fas fa-user-circle"></i> {{ current_user.username }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="{{ url_for('logout_action') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('auth.logout_action') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
             </ul>
           </li>
         </ul>

@@ -2,8 +2,12 @@
 {% block title %}Pokémon Dashboard - Login{% endblock %}
 
 {% block styles %}
+main {
+  display: flex;
+  flex-direction: column;
+}
 .login-page {
-  min-height: calc(100vh - 56px);
+  flex: 1;
   background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
   display: flex;
   align-items: center;
@@ -113,6 +117,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   if (!this.checkValidity()) {
     e.preventDefault();
@@ -132,4 +137,5 @@ document.getElementById('togglePassword').addEventListener('click', function() {
   input.type = isPassword ? 'text' : 'password';
   icon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
 });
+</script>
 {% endblock %}

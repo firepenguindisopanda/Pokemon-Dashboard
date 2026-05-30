@@ -1,286 +1,246 @@
 {% extends "layout.html" %}
 
 {% set type_colors = {
-  "grass": "#78C850",
-  "fire": "#F08030",
-  "water": "#6890F0",
-  "bug": "#A8B820",
-  "normal": "#A8A878",
-  "poison": "#A040A0",
-  "electric": "#F8D030",
-  "ground": "#E0C068",
-  "fairy": "#EE99AC",
-  "fighting": "#C03028",
-  "psychic": "#F85888",
-  "rock": "#B8A038",
-  "ghost": "#705898",
-  "ice": "#98D8D8",
-  "dragon": "#7038F8",
-  "flying": "#A890F0",
-  "steel": "#B8B8D0",
-  "dark": "#705848"
-  } %}
+  "grass": "#78C850", "fire": "#F08030", "water": "#6890F0",
+  "bug": "#A8B820", "normal": "#A8A878", "poison": "#A040A0",
+  "electric": "#F8D030", "ground": "#E0C068", "fairy": "#EE99AC",
+  "fighting": "#C03028", "psychic": "#F85888", "rock": "#B8A038",
+  "ghost": "#705898", "ice": "#98D8D8", "dragon": "#7038F8",
+  "flying": "#A890F0", "steel": "#B8B8D0", "dark": "#705848"
+} %}
+
+{% set primary_type = pokemon.type1.lower() %}
+{% set accent = type_colors.get(primary_type, "#C62828") %}
+{% set stat_max = 255 %}
 
 {% block title %}Pokémon Details - {{ pokemon.name }}{% endblock %}
 
-{% block page %}Pokemon Details{% endblock %}
-
-{% block link%}
-<ul id="nav-mobile" class="right">
-  <li><a href="/app">Home</a></li>
-  <li><a href="/pokemon-area">Pokemon Area</a></li>
-  <li><a href="/pokemon-stats">Pokemon Dashboard</a></li>
-  <li><a href="#">Pokemon Sandbox</a></li>
-  <li><a href="/logout">Logout</a></li>
-</ul>
-{% endblock %}
-
-{% block styles%}
-
-body {
-  background-color: #f0f0f0;
-}
-
-.pokemon-details {
-  
-  margin: 20px auto;
-  background-color: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  font-family: 'Arial', sans-serif;
-}
-
-.header {
-  background-color: #F08030;
-  color: white;
-  padding: 20px;
+{% block styles %}
+.detail-header {
+  background: linear-gradient(135deg, {{ accent }}dd, {{ accent }}88);
   position: relative;
-  text-align: center;
+  overflow: hidden;
 }
-
-.header .back-button {
+.detail-header::before {
+  content: '';
   position: absolute;
-  left: 20px;
-  top: 20px;
-  color: white;
-  text-decoration: none;
-  font-size: 24px;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
 }
-
-.pokemon-image {
-  background-color: #F08030;
-  text-align: center;
-  padding: 20px 0;
-}
-
-.pokemon-image img {
+.detail-header::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
   width: 200px;
   height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
 }
-
-.pokemon-info {
-  padding: 20px;
+.stat-label {
+  min-width: 50px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #555;
 }
-
-.types {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
+.stat-value {
+  min-width: 36px;
+  text-align: right;
+  font-weight: 700;
 }
-
-.type {
-  background-color: #F08030;
-  color: white;
-  padding: 5px 15px;
+.type-badge-lg {
+  padding: 6px 18px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-
-h2 {
-  color: #F08030;
-  font-size: 18px;
-  margin-top: 30px;
-  margin-bottom: 15px;
+.info-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: transform 0.15s ease;
 }
-
-.about-info {
-  display: flex;
-  justify-content: space-between;
+.info-card:hover {
+  transform: translateY(-2px);
 }
-
-.info-item {
-  text-align: center;
-}
-
-.info-item .icon {
-  font-size: 24px;
-  display: block;
-  margin-bottom: 5px;
-}
-
-.info-item .value {
-  font-weight: bold;
-}
-
-.info-item .label {
-  color: #999;
-  font-size: 12px;
-}
-
-.stats {
-  margin-top: 20px;
-}
-
-.stat-item {
+.stat-row {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
-
-.stat-label {
-  width: 50px;
-  text-align: right;
-  margin-right: 10px;
-  font-weight: bold;
-  color: #F08030;
-}
-
-.stat-bar {
-  flex-grow: 1;
-  background-color: #f0f0f0;
-  height: 5px;
-  border-radius: 5px;
+.stat-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
   overflow: hidden;
 }
-
-.stat-fill {
-  background-color: #F08030;
+.stat-bar-fill {
   height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
-
-.stat-value {
-  width: 30px;
-  text-align: right;
-  margin-left: 10px;
-}
-
-.type-grass {
-color: hwb(114 0% 31%);
-}
-
-.type-fire {
-color: red;
-}
-
-.type-water {
-color: blue;
-}
-
-.pokemon-sprite-container {
-display: flex;
-justify-content: center;
-margin: 20px 0;
-}
-
-.pokemon-sprite {
-width: 100px;
-height: 100px;
-object-fit: contain;
-border-radius: 5px;
+.ability-chip {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 16px;
+  background: #f0f0f0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 2px 4px 2px 0;
 }
 {% endblock %}
 
-
 {% block content %}
-<div class="container">
-  <div class="row">
-    <div class="col s12 m12 l12">
-      <div class=" pokemon-details">
-        <div class="header">
-          <a href="#" class="back-button"><i class="material-icons">arrow_back</i></a>
-          <h1>{{ pokemon.name }} #{{ '%03d' | format(pokemon.pokemon_id) }}</h1>
-        </div>
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-9 col-xl-8">
 
-        <div class="pokemon-image">
-          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png" alt="{{ pokemon.name }}">
-        </div>
-
-        <div class="pokemon-info">
-          <div class="types">
-            <span class="chip" style="background-color: {{ type_colors[pokemon.type1] }}">{{ pokemon.type1 }}</span>
-            {% if pokemon.type2 %}
-            <span class="chip" style="background-color: {{ type_colors[pokemon.type2] }}">{{ pokemon.type2 }}</span>
-            {% endif %}
+      <!-- Header -->
+      <div class="detail-header text-white p-4 rounded-top-4">
+        <a href="/pokemon-area" class="text-white text-decoration-none opacity-75 hover-opacity-100 d-inline-flex align-items-center mb-2" style="font-size:0.9rem;">
+          <i class="fas fa-arrow-left me-2"></i>Back to Pokémon Area
+        </a>
+        <div class="d-flex flex-column flex-sm-row align-items-center gap-4">
+          <div class="flex-shrink-0" style="filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+                 alt="{{ pokemon.name }}" style="width: 180px; height: 180px; image-rendering: pixelated;">
           </div>
-
-          <h2>About</h2>
-          <div class="row about-info">
-            <div class="col s4 info-item">
-              <i class="material-icons">fitness_center</i>
-              <span class="value">{{ pokemon.weight }} kg</span>
-              <span class="label">Weight</span>
-            </div>
-            <div class="col s4 info-item">
-              <i class="material-icons">straighten</i>
-              <span class="value">{{ pokemon.height }} m</span>
-              <span class="label">Height</span>
-            </div>
-            <div class="col s4 info-item">
-              <i class="material-icons">whatshot</i>
-              <span class="value">{{ pokemon.ability }}</span>
-              <span class="label">Ability</span>
-            </div>
-          </div>
-
-          <h2>Base Stats</h2>
-          <div class="stats">
-            <div class="stat-item">
-              <span class="stat-label">HP</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.hp / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.hp }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">ATK</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.attack / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.attack }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">DEF</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.defense / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.defense }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">SATK</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.sp_attack / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.sp_attack }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">SDEF</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.sp_defense / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.sp_defense }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">SPD</span>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ pokemon.speed / 2 }}%"></div>
-              </div>
-              <span class="stat-value">{{ pokemon.speed }}</span>
+          <div class="text-center text-sm-start">
+            <h1 class="fw-bold mb-1" style="font-size: 2.2rem;">
+              {{ pokemon.name }}
+              <span class="fw-normal opacity-75" style="font-size:1.4rem;">#{{ '%03d' % pokemon.pokedex_number }}</span>
+            </h1>
+            <p class="mb-2 opacity-85" style="font-size:1rem;">{{ pokemon.classification }}</p>
+            <div class="d-flex gap-2 justify-content-center justify-content-sm-start">
+              <span class="type-badge-lg" style="background:{{ type_colors.get(pokemon.type1.lower(), '#A8A878') }};">
+                <i class="fas fa-dot-circle"></i>{{ pokemon.type1 }}
+              </span>
+              {% if pokemon.type2 %}
+              <span class="type-badge-lg" style="background:{{ type_colors.get(pokemon.type2.lower(), '#A8A878') }};">
+                <i class="fas fa-dot-circle"></i>{{ pokemon.type2 }}
+              </span>
+              {% endif %}
+              {% if pokemon.is_legendary %}
+              <span class="type-badge-lg" style="background:linear-gradient(135deg,#F9A825,#F57C00);">
+                <i class="fas fa-crown"></i>Legendary
+              </span>
+              {% endif %}
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Body -->
+      <div class="bg-white rounded-bottom-4 shadow-sm p-4 p-md-5" style="border-top:4px solid {{ accent }};">
+
+        <!-- About Section -->
+        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-info-circle me-2"></i>About</h5>
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-weight-hanging" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">{{ pokemon.weight }} kg</div>
+              <small class="text-muted">Weight</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-ruler-vertical" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">{{ pokemon.height }} m</div>
+              <small class="text-muted">Height</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-tag" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">Gen {{ pokemon.generation }}</div>
+              <small class="text-muted">Generation</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-star" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">{{ pokemon.base_total }}</div>
+              <small class="text-muted">Base Total</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-hand" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">{{ pokemon.capture_rate }}</div>
+              <small class="text-muted">Capture Rate</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
+              <i class="fas fa-venus-mars" style="color:{{ accent }}; font-size:1.3rem;"></i>
+              <div class="fw-bold mt-1">
+                {% if pokemon.percentage_male == -1 %}
+                  Genderless
+                {% else %}
+                  {{ pokemon.percentage_male }}% ♂
+                {% endif %}
+              </div>
+              <small class="text-muted">Gender Ratio</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Abilities -->
+        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-bolt me-2"></i>Abilities</h5>
+        <div class="mb-4">
+          {% if pokemon.abilities is iterable and pokemon.abilities is not string %}
+            {% for ability in pokemon.abilities %}
+              <span class="ability-chip">{{ ability | trim }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">{{ pokemon.abilities }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Base Stats -->
+        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-chart-bar me-2"></i>Base Stats</h5>
+        {% set stats = [
+          ('HP', pokemon.hp),
+          ('ATK', pokemon.attack),
+          ('DEF', pokemon.defense),
+          ('SATK', pokemon.sp_attack),
+          ('SDEF', pokemon.sp_defense),
+          ('SPD', pokemon.speed)
+        ] %}
+        <div class="mb-2">
+          {% for label, value in stats %}
+          <div class="stat-row">
+            <span class="stat-label">{{ label }}</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width:{{ (value / stat_max * 100) | round }}%; background:{{ accent }};"></div>
+            </div>
+            <span class="stat-value" style="color:{{ accent }};">{{ value }}</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Total stat row -->
+        <div class="stat-row border-top pt-2 mt-2">
+          <span class="stat-label" style="min-width:50px;">TOTAL</span>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill" style="width:{{ (pokemon.base_total / (stat_max * 6) * 100) | round }}%; background:{{ accent }}; opacity:0.6;"></div>
+          </div>
+          <span class="stat-value" style="color:{{ accent }};">{{ pokemon.base_total }}</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

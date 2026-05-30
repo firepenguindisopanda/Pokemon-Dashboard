@@ -2,8 +2,12 @@
 {% block title %}Pokémon Dashboard - Sign Up{% endblock %}
 
 {% block styles %}
+main {
+  display: flex;
+  flex-direction: column;
+}
 .signup-page {
-  min-height: calc(100vh - 56px);
+  flex: 1;
   background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
   display: flex;
   align-items: center;
@@ -141,6 +145,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 (function() {
   var form = document.getElementById('signupForm');
   var usernameInput = document.getElementById('username');
@@ -261,4 +266,5 @@
     submitBtn.classList.add('btn-loading');
   });
 })();
+</script>
 {% endblock %}
