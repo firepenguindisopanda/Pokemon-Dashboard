@@ -1,11 +1,10 @@
 {% extends "layout.html" %}
-{% block title %}Pokemon Dashboard App - Sign Up{% endblock %}
-{% block page %}Pokemon Dashboard{% endblock %}
+{% block title %}Pokémon Dashboard - Sign Up{% endblock %}
 
 {% block styles %}
-.signup-container {
-  min-height: calc(100vh - 64px);
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+.signup-page {
+  min-height: calc(100vh - 56px);
+  background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,651 +13,252 @@
   overflow: hidden;
 }
 
-.signup-container::before {
+.signup-page::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('/static/img/pexels-jeffry-surianto-11188542.jpg') center/cover;
-  opacity: 0.1;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  animation: signup-glow 8s ease-in-out infinite alternate;
   z-index: 1;
 }
 
+@keyframes signup-glow {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-5%, -5%); }
+}
+
 .signup-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 450px;
-  position: relative;
+  max-width: 480px;
+  border-radius: 4px;
   z-index: 2;
-  transform: translateY(0);
-  transition: all 0.3s ease;
 }
 
-.signup-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-}
-
-.signup-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.signup-title {
-  font-size: 2.2em;
-  font-weight: 300;
-  color: #333;
-  margin-bottom: 8px;
-  background: linear-gradient(45deg, #764ba2, #667eea);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.signup-subtitle {
-  color: #666;
-  font-size: 1.1em;
-  font-weight: 300;
-}
-
-.pokemon-icon {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 20px;
-  background: linear-gradient(45deg, #764ba2, #667eea);
+.signup-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #C62828, #E53935);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: 28px;
   color: white;
-  animation: pulse 2s infinite;
+  margin: 0 auto 16px;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(118, 75, 162, 0.7);
-  }
-  70% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 10px rgba(118, 75, 162, 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(118, 75, 162, 0);
-  }
-}
-
-.enhanced-input-field {
-  margin-bottom: 25px;
-  position: relative;
-}
-
-.enhanced-input-field input {
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 5;
+  color: #6c757d;
+  background: none;
   border: none;
-  border-bottom: 2px solid #e0e0e0;
-  border-radius: 0;
-  background: transparent;
-  font-size: 16px;
-  padding: 12px 0;
-  transition: all 0.3s ease;
-  box-shadow: none !important;
-  width: 100%;
-}
-
-.enhanced-input-field input:focus {
-  border-bottom: 2px solid #764ba2;
-  outline: none;
-}
-
-.enhanced-input-field label {
-  position: absolute;
-  top: 12px;
-  left: 0;
-  color: #999;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  pointer-events: none;
-}
-
-.enhanced-input-field input:focus + label,
-.enhanced-input-field input:not(:placeholder-shown) + label {
-  top: -20px;
-  font-size: 12px;
-  color: #764ba2;
-  font-weight: 500;
-}
-
-.enhanced-input-field .input-icon {
-  position: absolute;
-  right: 0;
-  top: 12px;
-  color: #999;
-  transition: all 0.3s ease;
-}
-
-.enhanced-input-field input:focus ~ .input-icon {
-  color: #764ba2;
-}
-
-.password-strength {
-  margin-top: 5px;
-  height: 4px;
-  background: #e0e0e0;
-  border-radius: 2px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.password-strength-bar {
-  height: 100%;
-  width: 0;
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-
-.strength-weak { background: #f44336; }
-.strength-fair { background: #ff9800; }
-.strength-good { background: #2196f3; }
-.strength-strong { background: #4caf50; }
-
-.password-requirements {
-  font-size: 12px;
-  color: #666;
-  margin-top: 8px;
-  list-style: none;
   padding: 0;
+  line-height: 1;
 }
 
-.password-requirements li {
-  margin: 2px 0;
-  padding-left: 20px;
-  position: relative;
-  transition: color 0.3s ease;
-}
-
-.password-requirements li::before {
-  content: '✗';
-  position: absolute;
-  left: 0;
-  color: #f44336;
-  transition: all 0.3s ease;
+.password-toggle:hover {
+  color: #C62828;
 }
 
 .password-requirements li.valid {
-  color: #4caf50;
-}
-
-.password-requirements li.valid::before {
-  content: '✓';
-  color: #4caf50;
-}
-
-.signup-btn {
-  width: 100%;
-  background: linear-gradient(45deg, #764ba2, #667eea);
-  border: none;
-  border-radius: 25px;
-  padding: 15px;
-  font-size: 16px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
-}
-
-.signup-btn:hover:not(:disabled) {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(118, 75, 162, 0.4);
-}
-
-.signup-btn:active {
-  transform: translateY(0);
-}
-
-.signup-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.back-to-login {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.back-to-login a {
-  color: #764ba2;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.back-to-login a::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -2px;
-  left: 50%;
-  background: linear-gradient(45deg, #764ba2, #667eea);
-  transition: all 0.3s ease;
-}
-
-.back-to-login a:hover::after {
-  width: 100%;
-  left: 0;
-}
-
-.back-to-login a:hover {
-  color: #667eea;
-}
-
-.enhanced-input-field input.valid {
-  border-bottom: 2px solid #4caf50;
-}
-
-.enhanced-input-field input.invalid {
-  border-bottom: 2px solid #f44336;
-}
-
-.error-message {
-  color: #f44336;
-  font-size: 12px;
-  margin-top: 5px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.error-message.show {
-  opacity: 1;
-}
-
-.success-message {
-  color: #4caf50;
-  font-size: 12px;
-  margin-top: 5px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.success-message.show {
-  opacity: 1;
-}
-
-.loading {
-  position: relative;
-  pointer-events: none;
-}
-
-.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid #ffffff;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@media only screen and (max-width: 480px) {
-  .signup-card {
-    padding: 30px 20px;
-    margin: 10px;
-  }
-  
-  .signup-title {
-    font-size: 1.8em;
-  }
-  
-  .pokemon-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 25px;
-  }
-}
-
-.step-indicator {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-  gap: 15px;
-}
-
-.step {
-  width: 30px;
-  height: 4px;
-  background: #e0e0e0;
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-
-.step.active {
-  background: linear-gradient(45deg, #764ba2, #667eea);
+  color: #198754;
 }
 {% endblock %}
 
 {% block content %}
-<div class="signup-container">
-  <div class="signup-card">
-    <div class="signup-header">
-      <div class="pokemon-icon">
-        <i class="material-icons">person_add</i>
-      </div>
-      <h2 class="signup-title">Join the Adventure</h2>
-      <p class="signup-subtitle">Create your Pokemon Dashboard account</p>
-    </div>
-
-    <div class="step-indicator">
-      <div class="step active"></div>
-      <div class="step"></div>
-      <div class="step"></div>
-    </div>
-    
-    <form id="signupForm" method="POST" action="/signup">
-      <div class="enhanced-input-field">
-        <input 
-          type="text" 
-          id="username" 
-          name="username" 
-          required 
-          placeholder=" "
-          autocomplete="username"
-        >
-        <label for="username">Choose a Username</label>
-        <i class="material-icons input-icon">person</i>
-        <div class="error-message" id="username-error"></div>
-        <div class="success-message" id="username-success"></div>
-      </div>
-      
-      <div class="enhanced-input-field">
-        <input 
-          type="email" 
-          id="email" 
-          name="email" 
-          required 
-          placeholder=" "
-          autocomplete="email"
-        >
-        <label for="email">Email Address</label>
-        <i class="material-icons input-icon">email</i>
-        <div class="error-message" id="email-error"></div>
-        <div class="success-message" id="email-success"></div>
-      </div>
-      
-      <div class="enhanced-input-field">
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          required 
-          placeholder=" "
-          autocomplete="new-password"
-        >
-        <label for="password">Create Password</label>
-        <i class="material-icons input-icon toggle-password" style="cursor: pointer;">visibility_off</i>
-        <div class="password-strength">
-          <div class="password-strength-bar" id="strengthBar"></div>
+<div class="signup-page">
+  <div class="card signup-card shadow">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <div class="signup-icon">
+          <i class="fas fa-user-plus"></i>
         </div>
-        <ul class="password-requirements" id="passwordRequirements">
-          <li id="req-length">At least 8 characters</li>
-          <li id="req-uppercase">One uppercase letter</li>
-          <li id="req-lowercase">One lowercase letter</li>
-          <li id="req-number">One number</li>
-          <li id="req-special">One special character</li>
-        </ul>
-        <div class="error-message" id="password-error"></div>
+        <h4 class="fw-bold mb-1">Join the Adventure</h4>
+        <p class="text-muted small">Create your Pokémon Dashboard account</p>
       </div>
 
-      <div class="enhanced-input-field">
-        <input 
-          type="password" 
-          id="confirmPassword" 
-          name="confirmPassword" 
-          required 
-          placeholder=" "
-          autocomplete="new-password"
-        >
-        <label for="confirmPassword">Confirm Password</label>
-        <i class="material-icons input-icon">lock</i>
-        <div class="error-message" id="confirm-error"></div>
-        <div class="success-message" id="confirm-success"></div>
-      </div>
-      
-      <button type="submit" class="signup-btn" id="signupBtn" disabled>
-        <span class="btn-text">Create Account</span>
-      </button>
-    </form>
-    
-    <div class="back-to-login">
-      <p>Already have an account? 
-        <a href="/">
-          <i class="material-icons" style="font-size: 18px;">arrow_back</i>
-          Sign in here
-        </a>
+      <form id="signupForm" method="POST" action="/signup" novalidate>
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="username" name="username" placeholder="Username" autocomplete="username" minlength="3" pattern="[a-zA-Z0-9_]+" required>
+          <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+          <div class="invalid-feedback">Username must be at least 3 characters (letters, numbers, underscores only)</div>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="email" class="form-control" id="email" name="email" placeholder="Email" autocomplete="email" required>
+          <label for="email"><i class="fas fa-envelope me-2"></i>Email</label>
+          <div class="invalid-feedback">Please enter a valid email address</div>
+        </div>
+
+        <div class="form-floating mb-3 position-relative">
+          <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="new-password" minlength="8" required>
+          <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+          <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+            <i class="fas fa-eye"></i>
+          </button>
+          <div class="invalid-feedback">Password must be at least 8 characters</div>
+        </div>
+
+          <div class="progress mb-2" style="height: 4px;">
+            <div class="password-strength-bar level-0" id="strengthBar" role="progressbar" aria-label="Password strength" aria-valuenow="0" aria-valuemin="0" aria-valuemax="4"></div>
+          </div>
+
+        <ul class="list-unstyled small password-requirements mb-3" id="passwordRequirements">
+          <li id="req-length" class="text-muted"><span class="req-icon">✗</span> At least 8 characters</li>
+          <li id="req-uppercase" class="text-muted"><span class="req-icon">✗</span> One uppercase letter</li>
+          <li id="req-lowercase" class="text-muted"><span class="req-icon">✗</span> One lowercase letter</li>
+          <li id="req-number" class="text-muted"><span class="req-icon">✗</span> One number</li>
+          <li id="req-special" class="text-muted"><span class="req-icon">✗</span> One special character</li>
+        </ul>
+
+        <div class="form-floating mb-3">
+          <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" autocomplete="new-password" required>
+          <label for="confirmPassword"><i class="fas fa-check-circle me-2"></i>Confirm Password</label>
+          <div class="invalid-feedback">Passwords do not match</div>
+        </div>
+
+        <button type="submit" class="btn btn-danger w-100 btn-lg" id="submitBtn" disabled>
+          <span id="btnText">Create Account</span>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+        </button>
+      </form>
+
+      <p class="text-center mt-4 mb-0 small">
+        Already have an account? <a href="/" class="text-danger fw-bold">Sign in here</a>
       </p>
     </div>
   </div>
 </div>
+{% endblock %}
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('signupForm');
-  const usernameInput = document.getElementById('username');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const confirmPasswordInput = document.getElementById('confirmPassword');
-  const togglePassword = document.querySelector('.toggle-password');
-  const signupBtn = document.getElementById('signupBtn');
-  const strengthBar = document.getElementById('strengthBar');
-  const steps = document.querySelectorAll('.step');
-  
-  let validationState = {
+{% block scripts %}
+(function() {
+  var form = document.getElementById('signupForm');
+  var usernameInput = document.getElementById('username');
+  var emailInput = document.getElementById('email');
+  var passwordInput = document.getElementById('password');
+  var confirmPasswordInput = document.getElementById('confirmPassword');
+  var togglePassword = document.getElementById('togglePassword');
+  var submitBtn = document.getElementById('submitBtn');
+  var btnText = document.getElementById('btnText');
+  var btnSpinner = document.getElementById('btnSpinner');
+  var strengthBar = document.getElementById('strengthBar');
+
+  var validationState = {
     username: false,
     email: false,
     password: false,
     confirmPassword: false
   };
 
+  var requirements = [
+    { id: 'length', test: function(p) { return p.length >= 8; } },
+    { id: 'uppercase', test: function(p) { return /[A-Z]/.test(p); } },
+    { id: 'lowercase', test: function(p) { return /[a-z]/.test(p); } },
+    { id: 'number', test: function(p) { return /\d/.test(p); } },
+    { id: 'special', test: function(p) { return /[!@#$%^&*(),.?":{}|<>]/.test(p); } }
+  ];
+
   togglePassword.addEventListener('click', function() {
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    this.textContent = type === 'password' ? 'visibility_off' : 'visibility';
+    var isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    this.querySelector('i').className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
   });
 
   function checkPasswordStrength(password) {
-    let score = 0;
-    const requirements = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-
-    Object.keys(requirements).forEach(req => {
-      const element = document.getElementById(`req-${req}`);
-      if (requirements[req]) {
-        element.classList.add('valid');
+    var score = 0;
+    requirements.forEach(function(req) {
+      var el = document.getElementById('req-' + req.id);
+      var valid = req.test(password);
+      if (valid) {
+        el.classList.add('valid');
+        el.classList.remove('text-muted');
+        el.querySelector('.req-icon').textContent = '\u2713';
         score++;
       } else {
-        element.classList.remove('valid');
+        el.classList.remove('valid');
+        el.classList.add('text-muted');
+        el.querySelector('.req-icon').textContent = '\u2717';
       }
     });
 
-    const percentage = (score / 5) * 100;
-    strengthBar.style.width = percentage + '%';
-    
-    strengthBar.className = 'password-strength-bar';
-    if (score < 2) strengthBar.classList.add('strength-weak');
-    else if (score < 3) strengthBar.classList.add('strength-fair');
-    else if (score < 4) strengthBar.classList.add('strength-good');
-    else strengthBar.classList.add('strength-strong');
+    var level = Math.min(score, 4);
+    strengthBar.className = 'password-strength-bar level-' + level;
+    strengthBar.setAttribute('aria-valuenow', level);
 
     return score >= 4;
   }
 
-  function validateUsername(username) {
-    const isValid = username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
-    updateValidation('username', isValid, 
-      'Username must be at least 3 characters and contain only letters, numbers, and underscores',
-      'Username looks great!'
-    );
-    return isValid;
+  function validateUsername() {
+    var val = usernameInput.value;
+    var isValid = val.length >= 3 && /^[a-zA-Z0-9_]+$/.test(val);
+    usernameInput.classList.toggle('is-invalid', !isValid && val.length > 0);
+    usernameInput.classList.toggle('is-valid', isValid);
+    validationState.username = isValid;
+    updateSubmitBtn();
   }
 
-  function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(email);
-    updateValidation('email', isValid, 
-      'Please enter a valid email address',
-      'Email format is correct!'
-    );
-    return isValid;
+  function validateEmail() {
+    var val = emailInput.value;
+    var isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    emailInput.classList.toggle('is-invalid', !isValid && val.length > 0);
+    emailInput.classList.toggle('is-valid', isValid);
+    validationState.email = isValid;
+    updateSubmitBtn();
   }
 
-  function validatePassword(password) {
-    const isValid = checkPasswordStrength(password);
-    validationState.password = isValid;
-    updateSubmitButton();
-    return isValid;
+  function validatePassword() {
+    var val = passwordInput.value;
+    validationState.password = checkPasswordStrength(val);
+    if (confirmPasswordInput.value) validateConfirmPassword();
+    updateSubmitBtn();
   }
 
   function validateConfirmPassword() {
-    const isValid = confirmPasswordInput.value === passwordInput.value && passwordInput.value !== '';
-    updateValidation('confirmPassword', isValid, 
-      'Passwords do not match',
-      'Passwords match!'
-    );
-    return isValid;
+    var isValid = confirmPasswordInput.value === passwordInput.value && passwordInput.value !== '';
+    confirmPasswordInput.classList.toggle('is-invalid', !isValid && confirmPasswordInput.value.length > 0);
+    confirmPasswordInput.classList.toggle('is-valid', isValid);
+    validationState.confirmPassword = isValid;
+    updateSubmitBtn();
   }
 
-  function updateValidation(field, isValid, errorMsg, successMsg) {
-    const input = document.getElementById(field === 'confirmPassword' ? 'confirmPassword' : field);
-    const errorElement = document.getElementById(field === 'confirmPassword' ? 'confirm-error' : `${field}-error`);
-    const successElement = document.getElementById(field === 'confirmPassword' ? 'confirm-success' : `${field}-success`);
-    
-    validationState[field] = isValid;
-    
-    if (isValid) {
-      input.classList.remove('invalid');
-      input.classList.add('valid');
-      errorElement.classList.remove('show');
-      if (successElement) {
-        successElement.textContent = successMsg;
-        successElement.classList.add('show');
-      }
-    } else {
-      input.classList.remove('valid');
-      input.classList.add('invalid');
-      if (successElement) successElement.classList.remove('show');
-      errorElement.textContent = errorMsg;
-      errorElement.classList.add('show');
-    }
-    
-    updateSubmitButton();
-    updateSteps();
+  function updateSubmitBtn() {
+    submitBtn.disabled = !(validationState.username && validationState.email && validationState.password && validationState.confirmPassword);
   }
 
-  function updateSubmitButton() {
-    const allValid = Object.values(validationState).every(Boolean);
-    signupBtn.disabled = !allValid;
-  }
-
-  function updateSteps() {
-    const validCount = Object.values(validationState).filter(Boolean).length;
-    steps.forEach((step, index) => {
-      if (index < Math.ceil(validCount * 3 / 4)) {
-        step.classList.add('active');
-      } else {
-        step.classList.remove('active');
-      }
-    });
-  }
-
-  usernameInput.addEventListener('input', function() {
-    if (this.value.length > 0) {
-      validateUsername(this.value);
-    }
-  });
-
-  emailInput.addEventListener('blur', function() {
-    if (this.value.length > 0) {
-      validateEmail(this.value);
-    }
-  });
-
-  passwordInput.addEventListener('input', function() {
-    validatePassword(this.value);
-    if (confirmPasswordInput.value) {
-      validateConfirmPassword();
-    }
-  });
-
-  confirmPasswordInput.addEventListener('input', function() {
-    validateConfirmPassword();
-  });
+  usernameInput.addEventListener('input', validateUsername);
+  emailInput.addEventListener('input', validateEmail);
+  passwordInput.addEventListener('input', validatePassword);
+  confirmPasswordInput.addEventListener('input', validateConfirmPassword);
+  usernameInput.addEventListener('blur', validateUsername);
+  emailInput.addEventListener('blur', validateEmail);
+  confirmPasswordInput.addEventListener('blur', validateConfirmPassword);
 
   form.addEventListener('submit', function(e) {
-    const isUsernameValid = validateUsername(usernameInput.value);
-    const isEmailValid = validateEmail(emailInput.value);
-    const isPasswordValid = validatePassword(passwordInput.value);
-    const isConfirmValid = validateConfirmPassword();
+    validateUsername();
+    validateEmail();
+    validatePassword();
+    validateConfirmPassword();
 
-    if (!isUsernameValid || !isEmailValid || !isPasswordValid || !isConfirmValid) {
+    if (!(validationState.username && validationState.email && validationState.password && validationState.confirmPassword)) {
       e.preventDefault();
+      form.classList.add('was-validated');
       return;
     }
 
-    signupBtn.classList.add('loading');
-    signupBtn.querySelector('.btn-text').textContent = 'Creating Account...';
-    signupBtn.disabled = true;
+    btnText.textContent = 'Creating Account...';
+    btnSpinner.classList.remove('d-none');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('btn-loading');
   });
-
-  const inputs = document.querySelectorAll('.enhanced-input-field input');
-  inputs.forEach(input => {
-    input.addEventListener('focus', function() {
-      this.parentElement.style.transform = 'scale(1.02)';
-    });
-    
-    input.addEventListener('blur', function() {
-      this.parentElement.style.transform = 'scale(1)';
-    });
-  });
-
-  const signupCard = document.querySelector('.signup-card');
-  signupCard.style.opacity = '0';
-  signupCard.style.transform = 'translateY(30px)';
-  
-  setTimeout(() => {
-    signupCard.style.transition = 'all 0.6s ease';
-    signupCard.style.opacity = '1';
-    signupCard.style.transform = 'translateY(0)';
-  }, 100);
-});
-</script>
+})();
 {% endblock %}
