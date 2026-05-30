@@ -67,6 +67,13 @@ def user_lookup_callback(_jwt_header, jwt_data):
   identity = jwt_data["sub"]
   return db.session.get(User, identity)
 
+@app.context_processor
+def inject_current_user():
+    try:
+        return dict(current_user=current_user)
+    except Exception:
+        return dict(current_user=None)
+
 # *************************************
 
 # Initializer Function to be used in both init command and /init route
