@@ -1,76 +1,76 @@
 {
   "legendary_classifier": {
-    "version": "legendary_classifier_20260531_013809_df34892b6852",
-    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/legendary_classifier_20260531_013809_df34892b6852.joblib",
-    "data_hash": "df34892b6852",
+    "version": "legendary_classifier_20260531_034010_e59346714f69",
+    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/legendary_classifier_20260531_034010_e59346714f69.joblib",
+    "data_hash": "e59346714f69",
     "metrics": {
-      "accuracy": 0.9813664596273292,
-      "f1_cv_score": 0.9204982152350573,
+      "accuracy": 0.9875776397515528,
+      "f1_cv_score": 0.9196627933470038,
       "best_params": {
         "class_weight": null,
-        "max_depth": 5,
-        "min_samples_split": 5,
-        "n_estimators": 50
+        "max_depth": 10,
+        "min_samples_split": 2,
+        "n_estimators": 200
       },
       "feature_importance": {
-        "hp": 0.0641700865215628,
-        "attack": 0.019823583346209792,
-        "defense": 0.021617042576764684,
-        "sp_attack": 0.05320760766956623,
-        "sp_defense": 0.04732629368147297,
-        "speed": 0.04516041539178087,
-        "type1_encoded": 0.01137372301634124,
-        "type2_encoded": 0.006678402303847587,
-        "generation": 0.011745715753688482,
-        "has_dual_type": 0.0014965150788586853,
-        "height_m": 0.03334773979602265,
-        "weight_kg": 0.049287555117860114,
-        "capture_rate": 0.30460505959500994,
-        "num_abilities": 0.06761721902104306,
-        "base_total": 0.262543041129971
+        "hp": 0.04732079659948786,
+        "attack": 0.040177079619798925,
+        "defense": 0.02999620554528539,
+        "sp_attack": 0.081013989161732,
+        "sp_defense": 0.05517242736977262,
+        "speed": 0.05333633931142489,
+        "type1_encoded": 0.015590662215302874,
+        "type2_encoded": 0.013069389330030939,
+        "generation": 0.020775341584113448,
+        "has_dual_type": 0.003903113844615764,
+        "height_m": 0.07060288751693325,
+        "weight_kg": 0.0618115769334513,
+        "capture_rate": 0.29732517346061965,
+        "num_abilities": 0.0,
+        "base_total": 0.20990501750743104
       },
       "model_type": "RandomForest"
     },
-    "saved_at": "20260531_013809"
+    "saved_at": "20260531_034010"
   },
   "stats_regressor": {
-    "version": "stats_regressor_20260531_013809_df34892b6852",
-    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/stats_regressor_20260531_013809_df34892b6852.joblib",
-    "data_hash": "df34892b6852",
+    "version": "stats_regressor_20260531_034010_e59346714f69",
+    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/stats_regressor_20260531_034010_e59346714f69.joblib",
+    "data_hash": "e59346714f69",
     "metrics": {
-      "r2_score": 0.9280766872299149,
-      "mse": 957.4761975155279,
+      "r2_score": 0.9390939721255811,
+      "mse": 847.9287105521545,
       "best_params": {
-        "max_depth": null,
+        "max_depth": 15,
         "min_samples_split": 2,
-        "n_estimators": 100
+        "n_estimators": 200
       },
       "feature_importance": {
-        "hp": 0.1017353879700042,
-        "attack": 0.08864917582076963,
-        "defense": 0.0496923389013033,
-        "sp_attack": 0.1056501282465719,
-        "sp_defense": 0.08710060653133914,
-        "speed": 0.02686690984173237,
-        "type1_encoded": 0.0038896498783094996,
-        "type2_encoded": 0.0025407280378992357,
-        "generation": 0.0030821893373512094,
-        "has_dual_type": 0.000739981561403373,
-        "height_m": 0.04709130850807085,
-        "weight_kg": 0.009483249305932728,
-        "capture_rate": 0.47347834605931266
+        "hp": 0.3086465050761991,
+        "attack": 0.0895738436102314,
+        "defense": 0.03531161236069093,
+        "sp_attack": 0.11087887360021025,
+        "sp_defense": 0.1470675964160267,
+        "speed": 0.029732616540843488,
+        "type1_encoded": 0.003470247333378299,
+        "type2_encoded": 0.0027825973245875404,
+        "generation": 0.0030588867478109705,
+        "has_dual_type": 0.0006602595307849063,
+        "height_m": 0.05621429885008519,
+        "weight_kg": 0.00942877215399968,
+        "capture_rate": 0.20317389045515138
       }
     },
-    "saved_at": "20260531_013809"
+    "saved_at": "20260531_034010"
   },
   "_scalers": {
-    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/scalers_df34892b6852.joblib",
-    "data_hash": "df34892b6852",
-    "saved_at": "20260531_013809"
+    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/scalers_e59346714f69.joblib",
+    "data_hash": "e59346714f69",
+    "saved_at": "20260531_034011"
   },
   "_encoders": {
-    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/encoders_df34892b6852.joblib",
-    "data_hash": "df34892b6852",
-    "saved_at": "20260531_013809"
+    "path": "/home/nicho_unix/code/Pokemon-Dashboard/App/models_cache/encoders_e59346714f69.joblib",
+    "data_hash": "e59346714f69",
+    "saved_at": "20260531_034011"
   }
 }
