@@ -144,7 +144,7 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="user-pokemon-tbody">
               {% for up in usr_pkmons %}
               <tr id="user-pokemon-{{ up.id }}">
                 <td class="align-middle">
@@ -167,7 +167,7 @@
             </tbody>
           </table>
           {% else %}
-          <div class="text-center py-4">
+          <div class="text-center py-4" id="no-pokemon-msg">
             <p class="text-muted mb-0"><i class="fas fa-paw"></i> No Pokémon captured yet.</p>
           </div>
           {% endif %}
@@ -312,6 +312,7 @@ async function catchPokemon() {
     document.getElementById("arena-catch-result").innerHTML =
       '<p class="text-success fw-bold fs-5">🎉 You caught ' + data.pokemon_name + '!</p>' +
       '<button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Another</button>';
+    addPokemonToCollection(data);
     showToast("Caught " + data.pokemon_name + "!", "success");
   } else {
     showToast(data.pokemon_name + " broke free!", "warning");
@@ -377,6 +378,35 @@ function resetArena() {
   arenaMaxHp = 0;
   document.getElementById("arena-no-encounter").style.display = "block";
   document.getElementById("arena-encounter").style.display = "none";
+}
+
+function addPokemonToCollection(data) {
+  var tbody = document.getElementById("user-pokemon-tbody");
+  var emptyMsg = document.getElementById("no-pokemon-msg");
+
+  if (emptyMsg) {
+    var parent = emptyMsg.parentElement;
+    parent.innerHTML =
+      '<table class="table table-hover mb-0"><thead><tr><th>Pokémon</th><th>Name</th><th>Actions</th></tr></thead><tbody id="user-pokemon-tbody"></tbody></table>';
+    tbody = document.getElementById("user-pokemon-tbody");
+  }
+
+  var spriteUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + data.pokemon_id + ".png";
+  var row = document.createElement("tr");
+  row.id = "user-pokemon-" + data.user_pokemon_id;
+  row.innerHTML =
+    '<td class="align-middle"><img src="' + spriteUrl + '" alt="' + data.species + '" width="40" height="40" class="me-2">' + data.species + '</td>' +
+    '<td class="align-middle">' + data.pokemon_name + '</td>' +
+    '<td class="align-middle">' +
+      '<div class="d-flex align-items-center gap-1 w-100">' +
+        '<input type="text" name="new_name_' + data.user_pokemon_id + '" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required>' +
+        '<button type="submit" form="rename-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>' +
+        '<button type="submit" form="release-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>' +
+      '</div>' +
+      '<form id="rename-' + data.user_pokemon_id + '" action="/rename-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none"></form>' +
+      '<form id="release-' + data.user_pokemon_id + '" action="/release-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none"></form>' +
+    '</td>';
+  tbody.appendChild(row);
 }
 </script>
 {% endblock %}

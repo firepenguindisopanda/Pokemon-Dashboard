@@ -144,8 +144,9 @@ def catch(pokemon_id):
 
     caught = random.random() < chance
 
+    user_poke = None
     if caught:
-        user.catch_pokemon(pokemon.id, pokemon.name)
+        user_poke = user.catch_pokemon(pokemon.id, pokemon.name)
         session.pop("arena_pokemon_id", None)
         session.pop("arena_hp", None)
 
@@ -156,6 +157,9 @@ def catch(pokemon_id):
         "pokeballs_remaining": user.pokeballs,
         "pokemon_name": pokemon.name,
         "chance": round(chance, 4),
+        "user_pokemon_id": user_poke.id if user_poke else None,
+        "pokemon_id": pokemon.id,
+        "species": pokemon.name,
     })
 
 
