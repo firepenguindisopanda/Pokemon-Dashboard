@@ -40,6 +40,9 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
 let answering = false;
 
@@ -117,6 +120,6 @@ async function submitAnswer(answer, btnEl) {
   }
 }
 
-loadQuestion();
+document.addEventListener("DOMContentLoaded", loadQuestion);
 </script>
 {% endblock %}

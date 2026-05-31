@@ -62,21 +62,21 @@ def login(client, username, password):
 
 
 def test_calculate_catch_chance_full_hp_high_rate():
-    """Pidgey (capture_rate=255) at full HP -> ~85%"""
+    """Pidgey (capture_rate=255) at full HP -> 10% base chance"""
     chance = calculate_catch_chance(current_hp=40, max_hp=40, capture_rate=255)
-    assert chance == pytest.approx(0.85, abs=0.01)
+    assert chance == pytest.approx(0.10, abs=0.01)
 
 
 def test_calculate_catch_chance_low_hp_low_rate():
     """Mewtwo (capture_rate=3) at low HP -> very low"""
     chance = calculate_catch_chance(current_hp=10, max_hp=106, capture_rate=3)
-    assert chance == pytest.approx(0.004, abs=0.01)
+    assert chance == pytest.approx(0.021, abs=0.01)
 
 
 def test_calculate_catch_chance_half_hp():
     """Charmander (capture_rate=45) at half HP"""
     chance = calculate_catch_chance(current_hp=19, max_hp=39, capture_rate=45)
-    assert chance == pytest.approx(0.134, abs=0.01)
+    assert chance == pytest.approx(0.190, abs=0.01)
 
 
 def test_calculate_catch_chance_zero_hp():

@@ -13,9 +13,9 @@ arena_bp = Blueprint("arena", __name__)
 def calculate_catch_chance(current_hp, max_hp, capture_rate):
     if current_hp <= 0:
         return 0.0
-    hp_ratio = current_hp / max_hp
-    raw_chance = hp_ratio * (capture_rate / 255.0)
-    return min(raw_chance * 1.5, 0.85)
+    hp_factor = 0.05 + 0.95 * (1.0 - (current_hp / max_hp))
+    raw_chance = hp_factor * (capture_rate / 255.0)
+    return min(raw_chance * 2.0, 0.90)
 
 
 @arena_bp.route("/arena/encounter")
