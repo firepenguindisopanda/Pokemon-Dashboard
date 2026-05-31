@@ -67,20 +67,13 @@ def home_page(pokemon_id=1):
     ).all()
     user_pokemons_objects = [up.get_json() for up in user_pokemons]
 
-    # Get first captured Pokemon for Arena section
-    if user_pokemons:
-        first_captured = db.session.get(Pokemon, user_pokemons[0].pokemon_id)
-        arena_pokemon = first_captured.get_json() if first_captured else None
-    else:
-        arena_pokemon = None
-
     return render_template(
         "home.html",
         list_of_pokemon=list_of_pokemon,
         selected_pokemon_id=pokemon_id,
         pokemon=pokemon,
         usr_pkmons=user_pokemons_objects,
-        arena_pokemon=arena_pokemon,
+        pokeballs=current_user.pokeballs,
     )
 
 

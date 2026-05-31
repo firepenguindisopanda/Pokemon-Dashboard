@@ -14,6 +14,14 @@
 {% block content %}
 <div class="container-fluid py-3">
 
+  {% if pokeballs <= 0 %}
+  <div class="alert alert-warning text-center mb-3">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    You're out of Pokeballs!
+    <a href="/quiz" class="alert-link">Take the quiz</a> to earn more.
+  </div>
+  {% endif %}
+
   <form action="/app" method="GET" class="mb-4">
     <div class="input-group">
       <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
@@ -171,39 +179,42 @@
          data-bs-toggle="collapse" data-bs-target="#arenaCollapse"
          role="button" aria-expanded="false" aria-controls="arenaCollapse">
       <span class="fw-bold"><i class="fas fa-shield-alt me-2"></i>Pokémon Arena</span>
-      <i class="fas fa-chevron-down arena-chevron"></i>
+      <span class="badge bg-primary" id="pokeball-count">Pokeballs: <span id="pokeball-value">{{ pokeballs }}</span></span>
     </div>
     <div id="arenaCollapse" class="collapse">
       <div class="card-body text-center">
-        {% if arena_pokemon %}
-        <div class="sprite-glow mx-auto mb-3">
-          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ arena_pokemon.pokemon_id }}.png"
-               alt="{{ arena_pokemon.name }}" style="width: 120px; height: 120px;">
+        <div id="arena-no-encounter">
+          <p class="text-muted">Ready to battle a wild Pokemon?</p>
+          <button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Wild Pokemon!</button>
         </div>
-        <h5 class="fw-bold">{{ arena_pokemon.name }}</h5>
-        <div class="mb-2" style="max-width: 400px; margin: 0 auto;">
-          <div class="d-flex justify-content-between mb-1">
-            <span class="small fw-bold">HP</span>
-            <span class="small" id="arena-hp-text">{{ arena_pokemon.hp }}</span>
+        <div id="arena-encounter" style="display:none;">
+          <div class="sprite-glow mx-auto mb-3">
+            <img id="arena-sprite" src="" alt="" style="width: 120px; height: 120px;">
           </div>
-          <div class="stat-bar" style="height: 24px;">
-            <div id="arena-hp-bar" class="stat-fill bg-success"
-                 style="width: 100%;" role="progressbar"
-                 aria-valuenow="{{ arena_pokemon.hp }}"
-                 aria-valuemin="0" aria-valuemax="{{ arena_pokemon.hp }}"></div>
+          <h5 id="arena-name" class="fw-bold"></h5>
+          <div id="arena-types" class="mb-2"></div>
+          <div class="mb-2" style="max-width: 400px; margin: 0 auto;">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-bold">HP</span>
+              <span class="small" id="arena-hp-text"></span>
+            </div>
+            <div class="stat-bar" style="height: 24px;">
+              <div id="arena-hp-bar" class="stat-fill bg-success"
+                   style="width: 100%;" role="progressbar"
+                   aria-valuenow="0" aria-valuemin="0" aria-valuemax="0"></div>
+            </div>
           </div>
+          <div id="arena-actions" class="d-flex justify-content-center gap-2 mt-3">
+            <button class="btn btn-warning" onclick="attackPokemon()"><i class="fas fa-fist-raised me-1"></i>Attack</button>
+            <button class="btn btn-primary" onclick="catchPokemon()"><i class="fas fa-circle me-1"></i>Throw Pokeball</button>
+            <button class="btn btn-secondary" onclick="runFromPokemon()"><i class="fas fa-running me-1"></i>Run</button>
+          </div>
+          <div id="arena-fainted" style="display:none;" class="mt-3">
+            <p class="text-danger fw-bold">The wild Pokemon fainted!</p>
+            <button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Another</button>
+          </div>
+          <div id="arena-catch-result" style="display:none;" class="mt-3"></div>
         </div>
-        <div class="d-flex justify-content-center gap-2 mt-3">
-          <button id="arenaAttackBtn" class="btn btn-danger"><i class="fas fa-fist-raised me-1"></i>Attack</button>
-          <button id="arenaHealBtn" class="btn btn-success"><i class="fas fa-heart me-1"></i>Heal</button>
-          <button id="arenaResetBtn" class="btn btn-secondary"><i class="fas fa-undo me-1"></i>Reset</button>
-        </div>
-        {% else %}
-        <div class="py-4">
-          <i class="fas fa-paw fa-3x text-muted mb-2"></i>
-          <p class="text-muted">Capture a Pokémon to battle in the Arena!</p>
-        </div>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -265,44 +276,107 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endif %}
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const hpBar = document.getElementById("arena-hp-bar");
-  const hpText = document.getElementById("arena-hp-text");
-  if (!hpBar) return;
+let arenaCurrentHp = 0;
+let arenaMaxHp = 0;
+let arenaPokemonId = null;
 
-  const totalHp = parseInt(hpText.textContent);
-  let currentHp = totalHp;
+async function findWildPokemon() {
+  const resp = await apiFetch("/arena/encounter");
+  const data = await resp.json();
+  if (data.error) { showToast(data.error, "danger"); return; }
+  showEncounter(data);
+}
 
-  function updateArenaHp(newHp) {
-    currentHp = Math.max(0, Math.min(newHp, totalHp));
-    const pct = (currentHp / totalHp) * 100;
-    hpText.textContent = currentHp;
-    hpBar.style.width = pct + "%";
-    hpBar.setAttribute("aria-valuenow", currentHp);
+async function attackPokemon() {
+  if (!arenaPokemonId) return;
+  const resp = await apiFetch("/arena/attack/" + arenaPokemonId, { method: "POST" });
+  const data = await resp.json();
+  if (data.error) { showToast(data.error, "danger"); return; }
+  updateHpBar(data.current_hp, data.max_hp);
+  if (data.fainted) showFainted();
+}
 
-    hpBar.className = "stat-fill";
-    if (pct > 50) {
-      hpBar.classList.add("bg-success");
-    } else if (pct > 25) {
-      hpBar.classList.add("bg-warning");
-    } else {
-      hpBar.classList.add("bg-danger");
-    }
+async function catchPokemon() {
+  if (!arenaPokemonId) return;
+  const resp = await apiFetch("/arena/catch/" + arenaPokemonId, { method: "POST" });
+  const data = await resp.json();
+  if (data.error) {
+    if (data.redirect) { window.location.href = data.redirect; return; }
+    showToast(data.error, "danger");
+    return;
   }
+  document.getElementById("pokeball-value").textContent = data.pokeballs_remaining;
+  if (data.caught) {
+    document.getElementById("arena-actions").style.display = "none";
+    document.getElementById("arena-catch-result").style.display = "block";
+    document.getElementById("arena-catch-result").innerHTML =
+      '<p class="text-success fw-bold fs-5">🎉 You caught ' + data.pokemon_name + '!</p>' +
+      '<button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Another</button>';
+    showToast("Caught " + data.pokemon_name + "!", "success");
+  } else {
+    showToast(data.pokemon_name + " broke free!", "warning");
+  }
+}
 
-  document.getElementById("arenaAttackBtn").addEventListener("click", function () {
-    const dmg = Math.floor(Math.random() * 20) + 10;
-    updateArenaHp(currentHp - dmg);
-  });
+async function runFromPokemon() {
+  const resp = await apiFetch("/arena/run", { method: "POST" });
+  const data = await resp.json();
+  if (data.success) {
+    resetArena();
+    showToast("You fled!", "info");
+  }
+}
 
-  document.getElementById("arenaHealBtn").addEventListener("click", function () {
-    const heal = Math.floor(Math.random() * 15) + 10;
-    updateArenaHp(currentHp + heal);
-  });
+function showEncounter(data) {
+  arenaPokemonId = data.id;
+  arenaMaxHp = data.max_hp;
+  arenaCurrentHp = data.current_hp;
 
-  document.getElementById("arenaResetBtn").addEventListener("click", function () {
-    updateArenaHp(totalHp);
-  });
-});
+  document.getElementById("arena-no-encounter").style.display = "none";
+  document.getElementById("arena-encounter").style.display = "block";
+  document.getElementById("arena-fainted").style.display = "none";
+  document.getElementById("arena-catch-result").style.display = "none";
+  document.getElementById("arena-actions").style.display = "flex";
+
+  document.getElementById("arena-sprite").src = data.sprite_url;
+  document.getElementById("arena-name").textContent = data.name + " (#" + data.pokedex_number + ")";
+
+  var typesHtml = '<span class="type-badge type-' + data.type1.toLowerCase() + '">' + data.type1 + "</span>";
+  if (data.type2) {
+    typesHtml += '<span class="type-badge type-' + data.type2.toLowerCase() + ' ms-1">' + data.type2 + "</span>";
+  }
+  document.getElementById("arena-types").innerHTML = typesHtml;
+
+  document.getElementById("pokeball-value").textContent = data.pokeballs;
+  updateHpBar(data.current_hp, data.max_hp);
+}
+
+function updateHpBar(currentHp, maxHp) {
+  arenaCurrentHp = currentHp;
+  var pct = maxHp > 0 ? (currentHp / maxHp * 100) : 0;
+  var bar = document.getElementById("arena-hp-bar");
+  bar.style.width = pct + "%";
+  bar.setAttribute("aria-valuenow", currentHp);
+  bar.setAttribute("aria-valuemax", maxHp);
+  document.getElementById("arena-hp-text").textContent = currentHp + " / " + maxHp;
+
+  bar.className = "stat-fill";
+  if (pct > 50) bar.classList.add("bg-success");
+  else if (pct > 25) bar.classList.add("bg-warning");
+  else bar.classList.add("bg-danger");
+}
+
+function showFainted() {
+  document.getElementById("arena-actions").style.display = "none";
+  document.getElementById("arena-fainted").style.display = "block";
+}
+
+function resetArena() {
+  arenaPokemonId = null;
+  arenaCurrentHp = 0;
+  arenaMaxHp = 0;
+  document.getElementById("arena-no-encounter").style.display = "block";
+  document.getElementById("arena-encounter").style.display = "none";
+}
 </script>
 {% endblock %}
