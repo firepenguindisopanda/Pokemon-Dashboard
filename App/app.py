@@ -17,6 +17,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     unset_refresh_cookies,
 )
+from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError, TimeoutError
 from App.models import db, User
 from App.config import get_settings
@@ -103,6 +104,19 @@ def create_app():
     # ── Initialize Extensions ──
     db.init_app(app)
     CORS(app, origins=settings.cors_origins)
+
+    # ── Auto-initialize empty database ──
+    with app.app_context():
+        inspector = inspect(db.engine)
+        if not inspector.get_table_names():
+            logger.info("Database is empty — creating tables and seeding...")
+            initialize_db()
+            logger.info("Database initialized and seeded with Pokemon data.")
+        else:
+            logger.info(
+                "Database already initialized (%d tables).",
+                len(inspector.get_table_names()),
+            )
 
     jwt = JWTManager(app)
 

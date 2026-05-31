@@ -87,22 +87,21 @@
             </div>
           </div>
           <hr>
-          <div class="text-start">
-            {% set stat_list = [
-              ('HP', pokemon.hp), ('ATK', pokemon.attack), ('DEF', pokemon.defense),
-              ('SATK', pokemon.sp_attack), ('SDEF', pokemon.sp_defense), ('SPD', pokemon.speed)
-            ] %}
-            {% for label, value in stat_list %}
-            <div class="mb-1">
-              <div class="d-flex justify-content-between">
-                <span class="small fw-bold">{{ label }}</span>
-                <span class="small">{{ value }}</span>
-              </div>
-              <div class="stat-bar">
-                <div class="stat-fill" style="width: {{ (value / 255 * 100) | round }}%; background: {{ type_colors.get(pokemon.type1.lower(), '#C62828') }};"></div>
-              </div>
+          <div class="text-center">
+            <div class="chart-container" style="position:relative; max-width: 320px; margin: 0 auto;">
+              <canvas id="pokemon-stats-radar" width="280" height="280"></canvas>
             </div>
-            {% endfor %}
+            <div class="d-flex flex-wrap justify-content-center gap-2 mt-1 mb-1">
+              {% set stats_list = [
+                ('HP', pokemon.hp), ('ATK', pokemon.attack), ('DEF', pokemon.defense),
+                ('SATK', pokemon.sp_attack), ('SDEF', pokemon.sp_defense), ('SPD', pokemon.speed)
+              ] %}
+              {% for label, value in stats_list %}
+              <span class="small px-2 py-1 rounded" style="background: {{ type_colors.get(pokemon.type1.lower(), '#C62828') }}18; font-weight:600;">
+                {{ label }} <span class="fw-bold">{{ value }}</span>
+              </span>
+              {% endfor %}
+            </div>
           </div>
           <hr>
           <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
@@ -212,6 +211,59 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+{% if pokemon %}
+document.addEventListener("DOMContentLoaded", function () {
+  var accent = "{{ type_colors.get(pokemon.type1.lower(), '#C62828') }}";
+  var ctx = document.getElementById("pokemon-stats-radar").getContext("2d");
+  new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"],
+      datasets: [{
+        label: "{{ pokemon.name }}",
+        data: [{{ pokemon.hp }}, {{ pokemon.attack }}, {{ pokemon.defense }}, {{ pokemon.sp_attack }}, {{ pokemon.sp_defense }}, {{ pokemon.speed }}],
+        backgroundColor: accent + "30",
+        borderColor: accent,
+        borderWidth: 2,
+        pointBackgroundColor: accent,
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }, {
+        label: "Max (255)",
+        data: [255, 255, 255, 255, 255, 255],
+        backgroundColor: "rgba(0,0,0,0.02)",
+        borderColor: "rgba(0,0,0,0.15)",
+        borderWidth: 1,
+        borderDash: [4, 4],
+        pointRadius: 0,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 255,
+          ticks: { stepSize: 50, backdropColor: "transparent", font: { size: 10 } },
+          grid: { color: "rgba(0,0,0,0.08)" },
+          angleLines: { color: "rgba(0,0,0,0.08)" },
+          pointLabels: { font: { size: 12, weight: "bold" } }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+});
+{% endif %}
+</script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const hpBar = document.getElementById("arena-hp-bar");
