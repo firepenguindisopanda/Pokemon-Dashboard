@@ -39,6 +39,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
+    pokeballs = db.Column(db.Integer, default=10, nullable=False)
+    quiz_questions_answered = db.Column(db.Integer, default=0, nullable=False)
     pokemon = db.relationship('UserPokemon', backref='user')
     messages = db.relationship('Message', backref='sender', lazy=True)
 

@@ -82,7 +82,9 @@ def initialize_db():
             db.session.add(pokemon)
 
         bob = User(username="bob", email="bob@mail.com", password="bobpass")
+        bob.pokeballs = 10
         nick = User(username="nick", email="nick@mail.com", password="nickpass")
+        nick.pokeballs = 10
         db.session.add(bob)
         db.session.add(nick)
         db.session.commit()
