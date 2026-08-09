@@ -2,7 +2,6 @@
 
 import pytest
 import pandas as pd
-import numpy as np
 from pathlib import Path
 from App.lib import (
     PokemonAnalytics,
@@ -203,8 +202,12 @@ class TestPrediction:
         max_stats = {**sample_pokemon, 'hp': 255, 'attack': 255, 'defense': 255,
                      'sp_attack': 255, 'sp_defense': 255, 'speed': 255, 'base_total': 1530}
 
-        prob_min = analytics.predict_pokemon_stats(min_stats)['legendary_prediction']['legendary_probability']
-        prob_max = analytics.predict_pokemon_stats(max_stats)['legendary_prediction']['legendary_probability']
+        prob_min = analytics.predict_pokemon_stats(min_stats)['legendary_prediction'][
+            'legendary_probability'
+        ]
+        prob_max = analytics.predict_pokemon_stats(max_stats)['legendary_prediction'][
+            'legendary_probability'
+        ]
         assert prob_max >= prob_min, "Higher stats should not decrease legendary probability"
 
     def test_predict_with_unseen_type(self, analytics, sample_pokemon):
@@ -318,7 +321,7 @@ class TestClustering:
 
     def test_cluster_has_dominant_types(self, analytics):
         result = analytics.perform_clustering(n_clusters=5)
-        for cluster_key, cluster_data in result['cluster_analysis'].items():
+        for _cluster_key, cluster_data in result['cluster_analysis'].items():
             assert 'dominant_types' in cluster_data
             assert len(cluster_data['dominant_types']) > 0
             assert cluster_data['size'] > 0

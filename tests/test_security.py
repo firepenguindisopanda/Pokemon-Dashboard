@@ -7,54 +7,13 @@ the vulnerable code. Do not weaken these to make a change pass.
 import ast
 import csv
 import os
-import tempfile
+
 import pytest
-from sqlalchemy import create_engine
 
 from App.app import app, db
 from App.blueprints.auth import initialize_db
 from App.models import User, Pokemon
 
-
-@pytest.fixture(autouse=True)
-def _use_sqlite():
-    """Override the database to use a temporary SQLite file for all tests."""
-    db_fd, db_path = tempfile.mkstemp()
-    sqlite_uri = f"sqlite:///{db_path}"
-
-    orig_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
-    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
-    app.config['TESTING'] = True
-
-    with app.app_context():
-        test_engine = create_engine(sqlite_uri)
-        if 'sqlalchemy' in app.extensions:
-            ext = app.extensions['sqlalchemy']
-            for key in list(ext.engines.keys()):
-                ext.engines[key].dispose()
-            ext.engines[None] = test_engine
-
-    yield
-
-    test_engine.dispose()
-    with app.app_context():
-        if 'sqlalchemy' in app.extensions:
-            app.extensions['sqlalchemy'].engines.pop(None, None)
-    app.config['SQLALCHEMY_DATABASE_URI'] = orig_uri
-    os.close(db_fd)
-    os.unlink(db_path)
-
-
-@pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    client = app.test_client()
-
-    with app.app_context():
-        db.create_all()
-        initialize_db()
-
-    yield client
 
 
 class TestNoUnauthenticatedDatabaseWipe:

@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W  pycodestyle   — formatting and whitespace
+# F    pyflakes      — unused imports, undefined names, dead locals
+# B    bugbear       — likely bugs
+select = ["E", "W", "F", "B"]
+
+# zip(strict=) would change runtime behaviour on length-mismatched inputs.
+# Revisit deliberately rather than as part of a lint sweep.
+ignore = ["B905"]
+
+[tool.ruff.lint.per-file-ignores]
+# App/lib.py is a 1341-line legacy module scheduled for rework in Phase 6
+# (T15-T18). Its formatting is frozen until then so the rework diff stays
+# readable. Real defects are still enforced — only these are parked:
+#   W291/W293/W292/E501  pre-existing whitespace and long lines
+#   E712                 `series == False` is correct for pandas; ruff's
+#                        suggested `not series` would raise on a Series
+#   F841                 two dead scaled-feature locals — see tasks/todo.md T15
+"App/lib.py" = ["W291", "W293", "W292", "E501", "E712", "F841"]
+
+# Pre-existing whitespace only; this module is edited in T7 and T8.
+"App/models.py" = ["W293"]
+
+# The star re-exports are the package's public API surface.
+"App/__init__.py" = ["F403"]

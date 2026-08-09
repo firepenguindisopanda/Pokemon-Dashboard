@@ -4,7 +4,6 @@ import logging
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_jwt_extended import jwt_required, current_user
 from App.models import db, Pokemon, UserPokemon
-from App.constants import TYPE_COLORS
 
 logger = logging.getLogger(__name__)
 

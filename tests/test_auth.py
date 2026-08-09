@@ -1,66 +1,10 @@
 """Tests for refresh token endpoint and DB-resilient user lookup."""
 
-import os
-import tempfile
-import pytest
-from datetime import datetime, timezone
-from sqlalchemy import create_engine
 from flask_jwt_extended import decode_token
 
 from App.app import app, db, MinimalUser
-from App.blueprints.auth import initialize_db
-from App.models import User
+from tests.helpers import login
 
-
-@pytest.fixture(autouse=True)
-def _use_sqlite():
-    """Override the database to use a temporary SQLite file for all tests."""
-    db_fd, db_path = tempfile.mkstemp()
-    sqlite_uri = f"sqlite:///{db_path}"
-
-    orig_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
-    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
-
-    with app.app_context():
-        test_engine = create_engine(sqlite_uri)
-        if 'sqlalchemy' in app.extensions:
-            ext = app.extensions['sqlalchemy']
-            for key in list(ext.engines.keys()):
-                ext.engines[key].dispose()
-            ext.engines[None] = test_engine
-
-    yield
-
-    test_engine.dispose()
-    with app.app_context():
-        if 'sqlalchemy' in app.extensions:
-            app.extensions['sqlalchemy'].engines.pop(None, None)
-    app.config['SQLALCHEMY_DATABASE_URI'] = orig_uri
-    os.close(db_fd)
-    os.unlink(db_path)
-
-
-@pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
-    client = app.test_client()
-
-    with app.app_context():
-        db.create_all()
-        initialize_db()
-
-    yield client
-
-
-def login(client, username, password):
-    return client.post(
-        '/login',
-        data={'username': username, 'password': password},
-        follow_redirects=True
-    )
 
 
 class TestRefreshToken:
@@ -127,8 +71,6 @@ class TestUserLookupResilience:
         login(client, 'bob', 'bobpass')
 
         with app.app_context():
-            from flask import g
-
             jwt_data = {
                 "sub": 1,
                 "claims": {"username": "bob", "email": "bob@mail.com"}

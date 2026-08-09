@@ -5,7 +5,6 @@ import pandas as pd
 from scipy.optimize import minimize
 from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
@@ -111,7 +110,7 @@ class PokemonAnalytics:
         def parse_abilities(abilities_str):
             try:
                 return len(ast.literal_eval(abilities_str))
-            except:
+            except (ValueError, SyntaxError, TypeError):
                 return 1
         
         df['num_abilities'] = df['abilities'].apply(parse_abilities)

@@ -23,7 +23,7 @@ from App.models import db, User
 from App.config import get_settings
 from App.blueprints.auth import auth_bp, initialize_db
 from App.blueprints.pokemon import pokemon_bp
-from App.blueprints.analytics import analytics_bp, background_init_analytics, initialize_pokemon_analytics
+from App.blueprints.analytics import analytics_bp, background_init_analytics
 from App.blueprints.arena import arena_bp
 from App.blueprints.quiz import quiz_bp
 

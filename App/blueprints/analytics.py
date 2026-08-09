@@ -1,7 +1,6 @@
 """Analytics blueprint — ML API endpoints and analytics dashboard pages."""
 
 import logging
-import concurrent.futures
 from functools import wraps
 from flask import Blueprint, request, render_template, jsonify
 from flask_jwt_extended import jwt_required
@@ -374,8 +373,8 @@ def get_type_coverage():
 @jwt_required()
 def pokemon_analytics_dashboard():
     """Render the analytics dashboard page.
-    
-    NEVER blocks — page renders instantly. The frontend polls 
+
+    NEVER blocks — page renders instantly. The frontend polls
     /api/pokemon-analytics/status and loads sections asynchronously
     once analytics are ready.
     """
@@ -386,7 +385,7 @@ def pokemon_analytics_dashboard():
 @jwt_required()
 def pokemon_ml_playground():
     """Render the ML playground page.
-    
+
     NEVER blocks — page renders instantly. Widgets load asynchronously
     from /api/pokemon-analytics/* endpoints with per-widget loading states.
     """

@@ -12,6 +12,8 @@ itsdangerous==2.1.2
 pluggy==1.6.0
 PyJWT==2.6.0
 pytest==8.4.1
+pytest-cov==7.1.0
+ruff==0.16.2
 python-dotenv==0.21.1
 python-engineio==4.12.2
 python-socketio==5.13.0

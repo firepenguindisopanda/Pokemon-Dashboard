@@ -15,7 +15,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     unset_refresh_cookies,
 )
-from App.models import db, User, Pokemon, UserPokemon
+from App.models import db, User, Pokemon
 
 logger = logging.getLogger(__name__)
 

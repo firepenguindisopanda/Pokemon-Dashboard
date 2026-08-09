@@ -1,78 +1,8 @@
-import os
-import tempfile
-import pytest
-from flask import url_for
-from sqlalchemy import create_engine
-
 from App.app import app, db
-from App.blueprints.auth import initialize_db
 from App.models import User, UserPokemon, Pokemon
+from tests.helpers import login, signup
 
 
-@pytest.fixture(autouse=True)
-def _use_sqlite():
-    """Override the database to use a temporary SQLite file for all tests.
-    
-    This replaces the NeonDB/PostgreSQL engine at the Flask-SQLAlchemy
-    extension level so tests run locally without any external database.
-    """
-    db_fd, db_path = tempfile.mkstemp()
-    sqlite_uri = f"sqlite:///{db_path}"
-    
-    # Store original config to restore later
-    orig_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
-    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
-    
-    # Directly replace the engine at the extension level (needs app context)
-    with app.app_context():
-        test_engine = create_engine(sqlite_uri)
-        if 'sqlalchemy' in app.extensions:
-            ext = app.extensions['sqlalchemy']
-            # Dispose old engines
-            for key in list(ext.engines.keys()):
-                ext.engines[key].dispose()
-            # Register the new SQLite engine
-            ext.engines[None] = test_engine
-    
-    yield
-    
-    # Cleanup
-    test_engine.dispose()
-    with app.app_context():
-        if 'sqlalchemy' in app.extensions:
-            app.extensions['sqlalchemy'].engines.pop(None, None)
-    app.config['SQLALCHEMY_DATABASE_URI'] = orig_uri
-    os.close(db_fd)
-    os.unlink(db_path)
-
-
-@pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
-    client = app.test_client()
-    
-    with app.app_context():
-        db.create_all()
-        initialize_db()
-    
-    yield client
-
-def login(client, username, password):
-    return client.post(
-        '/login', 
-        data={'username': username, 'password': password},
-        follow_redirects=True
-    )
-
-def signup(client, username, email, password):
-    return client.post(
-        '/signup',
-        data={'username': username, 'email': email, 'password': password},
-        follow_redirects=True
-    )
 
 def test_user_model_password_hashing():
     """Ensure set_password hashes and check_password verifies correctly."""
@@ -139,7 +69,7 @@ def test_capture_release_via_client(client):
 
     # capture pokemon id=2 with nickname
     rv = client.post(
-        '/pokemon/2', 
+        '/pokemon/2',
         data={'nickname': 'TestNick'},
         headers={'Referer': '/'},
         follow_redirects=True
