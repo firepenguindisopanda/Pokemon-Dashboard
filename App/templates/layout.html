@@ -14,7 +14,7 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100" style="background: var(--pokemon-bg);">
-  {% set public_endpoints = ['auth.login_page', 'auth.signup_page', 'auth.init_route'] %}
+  {% set public_endpoints = ['auth.login_page', 'auth.signup_page'] %}
   {% set is_auth = request.endpoint not in public_endpoints %}
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-pokemon">

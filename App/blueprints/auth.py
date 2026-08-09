@@ -104,11 +104,11 @@ def login_user(username, password):
 # ── Routes ──
 
 
-@auth_bp.route("/init")
-def init_route():
-    """Drop and recreate the database, seeding with default data."""
-    initialize_db()
-    return redirect(url_for("pokemon.home_page"))
+# NOTE: There is deliberately no HTTP route for initialize_db().
+# It calls db.drop_all(), and it was previously exposed at GET /init with no
+# authentication — any visitor, crawler, or browser prefetch could destroy the
+# entire database. Seeding is an operator action: use the `flask init` CLI
+# command (registered in wsgi.py). Do not add a route back here.
 
 
 @auth_bp.route("/", methods=["GET"])
