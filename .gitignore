@@ -25,3 +25,7 @@ htmlcov/
 
 instance/
 __pycache__/
+
+# Runtime artifacts
+App/data.db
+App/models_cache/*.joblib
