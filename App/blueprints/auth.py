@@ -1,5 +1,6 @@
 """Authentication blueprint — login, signup, logout, and app initialization."""
 
+import ast
 import csv
 import logging
 from flask import Blueprint, request, redirect, render_template, url_for, flash, jsonify
@@ -24,11 +25,49 @@ auth_bp = Blueprint("auth", __name__, template_folder="../templates")
 # ── Initialization ──
 
 
-def initialize_db():
-    """Drop all tables, recreate, and seed with Pokemon data + default users."""
+def _parse_abilities(raw, pokemon_name, line_number):
+    """Parse the abilities column, which stores a Python list literal.
+
+    Uses ast.literal_eval rather than eval: the CSV is data, and a crafted
+    cell must never be able to execute code during seeding.
+
+    Args:
+        raw: Raw cell value, e.g. "['Overgrow', 'Chlorophyll']".
+        pokemon_name: Name from the same row, used in error messages.
+        line_number: Line in the CSV, used in error messages.
+
+    Returns:
+        List of ability name strings.
+
+    Raises:
+        ValueError: If the cell is not a well-formed list of strings.
+    """
+    try:
+        abilities = ast.literal_eval(raw)
+    except (ValueError, SyntaxError) as exc:
+        raise ValueError(
+            f"Invalid 'abilities' value on line {line_number} "
+            f"(pokemon={pokemon_name!r}): {raw!r}"
+        ) from exc
+
+    if not isinstance(abilities, list) or not all(isinstance(a, str) for a in abilities):
+        raise ValueError(
+            f"Invalid 'abilities' value on line {line_number} "
+            f"(pokemon={pokemon_name!r}): expected a list of strings, got {abilities!r}"
+        )
+
+    return abilities
+
+
+def initialize_db(csv_path="pokemon.csv"):
+    """Drop all tables, recreate, and seed with Pokemon data + default users.
+
+    Args:
+        csv_path: Path to the Pokemon seed CSV. Overridable for tests.
+    """
     db.drop_all()
     db.create_all()
-    with open("pokemon.csv", newline="", encoding="utf8") as csvfile:
+    with open(csv_path, newline="", encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if row["height_m"] == "":
@@ -38,7 +77,9 @@ def initialize_db():
             if row["type2"] == "":
                 row["type2"] = None
 
-            abilities_list = eval(row["abilities"])
+            abilities_list = _parse_abilities(
+                row["abilities"], row.get("name"), reader.line_num
+            )
 
             # Handle complex capture_rate values like "30 (Meteorite)255 (Core)"
             capture_rate_str = row["capture_rate"].strip()

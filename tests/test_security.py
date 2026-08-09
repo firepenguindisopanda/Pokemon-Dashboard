@@ -4,6 +4,8 @@ Each test here corresponds to a finding in tasks/spec.md and must fail against
 the vulnerable code. Do not weaken these to make a change pass.
 """
 
+import ast
+import csv
 import os
 import tempfile
 import pytest
@@ -92,6 +94,80 @@ class TestNoUnauthenticatedDatabaseWipe:
         """No URL rule may serve /init, under any endpoint name."""
         offenders = [rule.rule for rule in app.url_map.iter_rules() if rule.rule == '/init']
         assert offenders == [], f"a destructive route is still mapped at: {offenders}"
+
+
+class TestNoCodeExecutionFromSeedData:
+    """A2 — auth.py:41 ran eval() on the abilities column of every CSV row."""
+
+    @staticmethod
+    def _csv_with_abilities(tmpdir, payload):
+        """Build a valid one-row CSV, substituting the abilities cell."""
+        with open('pokemon.csv', newline='', encoding='utf8') as src:
+            reader = csv.reader(src)
+            header = next(reader)
+            row = next(reader)
+        row[header.index('abilities')] = payload
+
+        path = os.path.join(tmpdir, 'malicious.csv')
+        with open(path, 'w', newline='', encoding='utf8') as out:
+            writer = csv.writer(out)
+            writer.writerow(header)
+            writer.writerow(row)
+        return path
+
+    def test_no_eval_call_anywhere_in_app_source(self):
+        """Static guard: no module under App/ may call eval()."""
+        offenders = []
+        for root, _dirs, files in os.walk('App'):
+            for filename in files:
+                if not filename.endswith('.py'):
+                    continue
+                source_path = os.path.join(root, filename)
+                with open(source_path, encoding='utf8') as handle:
+                    tree = ast.parse(handle.read(), filename=source_path)
+                for node in ast.walk(tree):
+                    if (
+                        isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name)
+                        and node.func.id == 'eval'
+                    ):
+                        offenders.append(f"{source_path}:{node.lineno}")
+        assert offenders == [], f"eval() is called at: {offenders}"
+
+    def test_malicious_abilities_cell_does_not_execute(self, client, tmp_path):
+        """A crafted abilities cell must raise, not run arbitrary code."""
+        canary = tmp_path / 'pwned.txt'
+        payload = f"__import__('pathlib').Path({str(canary)!r}).write_text('pwned')"
+        csv_path = self._csv_with_abilities(str(tmp_path), payload)
+
+        with app.app_context():
+            with pytest.raises((ValueError, SyntaxError)):
+                initialize_db(csv_path)
+
+        assert not canary.exists(), (
+            "seeding executed code from the CSV — the abilities column is still "
+            "being passed to eval()"
+        )
+
+    def test_malformed_abilities_cell_names_the_offending_row(self, client, tmp_path):
+        """A broken cell must fail loudly enough to locate it."""
+        csv_path = self._csv_with_abilities(str(tmp_path), "['Overgrow',")
+
+        with app.app_context():
+            with pytest.raises(ValueError) as excinfo:
+                initialize_db(csv_path)
+
+        message = str(excinfo.value)
+        assert 'abilities' in message.lower()
+        assert 'Bulbasaur' in message, f"error does not identify the row: {message}"
+
+    def test_real_seed_data_still_parses_identically(self, client):
+        """Behaviour guard: the switch must not change what gets stored."""
+        with app.app_context():
+            bulbasaur = Pokemon.query.filter_by(name='Bulbasaur').first()
+            assert bulbasaur is not None
+            assert bulbasaur.abilities == 'Overgrow,Chlorophyll'
+            assert Pokemon.query.count() == 801
 
 
 class TestSeedingStillAvailableToOperators:
