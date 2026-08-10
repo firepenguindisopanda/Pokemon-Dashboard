@@ -417,8 +417,8 @@ class TestErrorResponsesDoNotLeakInternals:
             def get_descriptive_stats(self):
                 raise RuntimeError(secret)
 
-        monkeypatch.setattr(analytics_module, "pokemon_analytics", Exploding())
-        monkeypatch.setattr(analytics_module, "analytics_ready", True)
+        monkeypatch.setattr(analytics_module.state, "instance", Exploding())
+        monkeypatch.setattr(analytics_module.state, "ready", True)
 
         response = auth_client.get("/api/pokemon-analytics/stats")
         assert response.status_code == 500

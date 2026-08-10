@@ -20,8 +20,34 @@ QUESTION_TYPES = [
 ]
 
 
+def random_pokemon():
+    """Pick one Pokemon uniformly at random, fetching only that row.
+
+    This used to be `random.choice(Pokemon.query.all())`, which hydrated all
+    801 rows into ORM objects on every question just to discard 800 of them.
+
+    Offsetting by a Python-side index rather than `ORDER BY random()` keeps the
+    randomness where tests can drive it, and ordering by id makes the offset
+    mean the same thing on every run. Ids are not assumed to be contiguous —
+    OFFSET counts rows, not id values — so a gap in the sequence cannot produce
+    a miss.
+
+    Returns:
+        A single Pokemon, or None when the table is empty.
+    """
+    total = db.session.query(db.func.count(Pokemon.id)).scalar()
+    if not total:
+        return None
+    return (
+        Pokemon.query.order_by(Pokemon.id)
+        .offset(random.randrange(total))
+        .limit(1)
+        .first()
+    )
+
+
 def generate_question():
-    pokemon = random.choice(Pokemon.query.all())
+    pokemon = random_pokemon()
     qtype = random.choice(QUESTION_TYPES)
 
     question = None

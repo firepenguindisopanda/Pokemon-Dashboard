@@ -12,8 +12,11 @@ not on which fields happen to be in it today.
 import base64
 import json
 import zlib
+from types import SimpleNamespace
 
 import pytest
+from flask.sessions import TaggedJSONSerializer
+from itsdangerous import URLSafeTimedSerializer
 
 from App.app import app as flask_app
 from App.config import Settings
@@ -26,23 +29,112 @@ def decode_session_cookie(client):
     tampering, but its payload is plain readable base64.
 
     Returns:
-        The decoded payload dict, or None when no session cookie is set.
+        The decoded payload dict, or None when there is no session cookie or
+        the cookie is not a readable JSON payload — which is the expected
+        result for a server-side session, where the cookie holds only an
+        opaque id.
     """
     cookie = client.get_cookie("session")
     if cookie is None:
         return None
 
-    payload = cookie.value.split(".")[0]
-    if payload.startswith("-"):  # itsdangerous compression marker
-        payload = payload[1:]
-        raw = zlib.decompress(base64.urlsafe_b64decode(payload + "=="))
-    else:
-        raw = base64.urlsafe_b64decode(payload + "==")
+    value = cookie.value
+    # itsdangerous marks a compressed payload with a leading "." on the whole
+    # value. That is also the segment separator, so the marker has to come off
+    # before splitting. Note the marker is "." and not "-": "-" is an ordinary
+    # base64url character that begins roughly 1 in 64 session ids.
+    is_compressed = value.startswith(".")
+    if is_compressed:
+        value = value[1:]
+
+    payload = value.split(".")[0]
+    try:
+        raw = base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
+        if is_compressed:
+            raw = zlib.decompress(raw)
+    except (ValueError, zlib.error):
+        return None
 
     try:
         return json.loads(raw)
     except (ValueError, UnicodeDecodeError):
         return None
+
+
+def _client_holding(cookie_value):
+    """A stand-in test client carrying one prepared session cookie."""
+    return SimpleNamespace(
+        get_cookie=lambda name: (
+            None
+            if name != "session" or cookie_value is None
+            else SimpleNamespace(value=cookie_value)
+        )
+    )
+
+
+def _signed_cookie(payload):
+    """Build a real Flask cookie-session value the way Flask itself would.
+
+    Flask compresses the payload when that makes it smaller, so a large or
+    repetitive `payload` exercises the compressed branch and a small one does
+    not.
+    """
+    serializer = URLSafeTimedSerializer(
+        "secret",
+        salt="cookie-session",
+        serializer=TaggedJSONSerializer(),
+        signer_kwargs={"key_derivation": "hmac"},
+    )
+    return serializer.dumps(payload)
+
+
+class TestSessionCookieDecoder:
+    """The decoder above is the instrument every leak test reads from.
+
+    It had two defects that made those tests unreliable, so it is now tested
+    directly rather than trusted:
+
+    1. It treated a leading "-" as itsdangerous' compression marker. The real
+       marker is "."; "-" is an ordinary base64url character, and a
+       server-side session id begins with one about 1 time in 64. That raised
+       `zlib.error` and turned the suite flaky at roughly 8% per run.
+    2. It could not read a genuinely compressed cookie at all, returning None
+       — which the leak tests below coerce to `{}` and then pass. A cookie
+       that actually carried the quiz answer would have been reported clean.
+    """
+
+    def test_an_opaque_session_id_beginning_with_a_dash_is_not_mistaken_for_compression(self):
+        """Server-side session ids are random base64url; ~1 in 64 starts "-".
+
+        This is a real 43-character `secrets.token_urlsafe(32)` id with its
+        first character swapped for "-", so it reproduces the production
+        failure exactly rather than tripping some other decode error.
+        """
+        client = _client_holding("--xSRiBhAAUKGxlbkt2_tB7uuu8hMJ8oerXfokv7Pv0")
+        assert decode_session_cookie(client) is None
+
+    def test_a_compressed_cookie_carrying_game_state_is_decoded(self):
+        """The security-critical case: a real leak must not decode to None."""
+        cookie = _signed_cookie({"quiz_current_answer": "Pikachu", "pad": "aaaaaaaaaa" * 60})
+        assert cookie.startswith("."), "test setup failed: payload was not compressed"
+
+        payload = decode_session_cookie(_client_holding(cookie))
+        assert payload is not None, (
+            "a compressed cookie decoded to None — a leak in a compressed "
+            "cookie would be invisible to every test in this file"
+        )
+        assert payload["quiz_current_answer"] == "Pikachu"
+
+    def test_an_uncompressed_cookie_carrying_game_state_is_decoded(self):
+        """Regression guard on the path that already worked."""
+        cookie = _signed_cookie({"quiz_current_answer": "Mew"})
+        assert not cookie.startswith("."), "test setup failed: payload was compressed"
+
+        payload = decode_session_cookie(_client_holding(cookie))
+        assert payload["quiz_current_answer"] == "Mew"
+
+    def test_no_cookie_decodes_to_none(self):
+        assert decode_session_cookie(_client_holding(None)) is None
 
 
 class TestNoGameStateInTheCookie:
@@ -148,11 +240,19 @@ class TestProductionRequiresRedis:
         assert settings.redis_url.startswith("rediss://")
 
     def test_debug_mode_tolerates_a_missing_redis_url(self):
-        """Local development stays frictionless."""
+        """Local development stays frictionless.
+
+        `redis_url` is passed explicitly rather than left to fall through to
+        the field default. `_env_file=None` only switches off the dotenv
+        source — environment variables still apply — so without this the test
+        asserts on whatever REDIS_URL happens to hold, which is conftest's
+        business and not this test's subject.
+        """
         settings = Settings(
             _env_file=None,
             debug=True,
             flask_secret_key="change-me-in-production",
             jwt_secret_key="change-me-in-production",
+            redis_url=None,
         )
         assert settings.redis_url is None

@@ -234,3 +234,51 @@ class TestEnvExampleDocumentsTheRequirement:
             ".env.example must show how to generate a strong secret, or operators "
             "will keep shipping the placeholder"
         )
+
+
+class TestSuiteIsHermetic:
+    """The suite must never reach live infrastructure, whatever is configured.
+
+    `conftest.py` used to isolate the suite by deleting DATABASE_URL and
+    REDIS_URL from the environment. That covers a developer who exported them
+    in their shell, but not a `.env` file — pydantic-settings reads that
+    straight off disk, so deleting the variable achieves nothing.
+
+    The consequence was not theoretical. With a real `.env` present the limiter
+    bound to the production Upstash instance, and the rate-limit fixture's
+    `limiter.reset()` deletes keys there — on a Redis explicitly documented as
+    shared with another application.
+    """
+
+    def test_the_database_under_test_is_local(self):
+        from App.app import app
+
+        uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+        assert uri.startswith("sqlite"), (
+            f"the suite is pointed at a non-SQLite database: {uri.split('@')[-1]!r}. "
+            "Tests would read and write live data."
+        )
+
+    def test_the_rate_limiter_does_not_use_a_network_backend(self):
+        """`limiter.reset()` runs in a fixture, so a live backend loses keys."""
+        from App.app import app
+
+        uri = str(app.config.get("RATELIMIT_STORAGE_URI", ""))
+        assert uri.startswith("memory://"), (
+            f"rate limiting is backed by {uri.split('@')[-1]!r} rather than memory. "
+            "The rate-limit fixture calls limiter.reset(), which deletes keys "
+            "from that backend."
+        )
+
+    def test_settings_do_not_resolve_to_live_services(self):
+        """Catches the leak at the source rather than at one consumer."""
+        settings = get_settings()
+
+        assert not settings.database_url, (
+            "DATABASE_URL resolved to a value during the test run; conftest must "
+            "shadow it so a .env file cannot point the suite at Neon"
+        )
+        assert not settings.redis_url, (
+            "REDIS_URL resolved to a value during the test run; conftest must "
+            "shadow it so a .env file cannot point the suite at Upstash"
+        )

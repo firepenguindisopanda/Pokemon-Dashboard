@@ -34,19 +34,73 @@ def internal_error(context, status=500):
     return jsonify({"error": context}), status
 
 
-# ── Global analytics instance (async background training) ──
+# ── Analytics state ──
 
-pokemon_analytics = None
-analytics_ready = False
-analytics_error = None
 
-# Serialises training so concurrent requests cannot each start their own run.
-_initialization_lock = threading.Lock()
+class AnalyticsState:
+    """Holds the trained analytics instance and its readiness.
+
+    Previously three module globals mutated from several call sites with
+    `global` statements, including from a background thread — readers could
+    observe `ready` before the instance was actually assigned. Keeping them
+    together behind one lock makes the transition atomic.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.instance = None
+        self.ready = False
+        self.error = None
+        # Training metrics captured once, so serving them never retrains.
+        self.metrics = {}
+
+    @property
+    def lock(self):
+        """The mutex guarding initialization."""
+        return self._lock
+
+    def mark_ready(self, instance, metrics=None):
+        """Publish a trained instance. Assign before flipping the flag.
+
+        Args:
+            instance: The trained PokemonAnalytics object.
+            metrics: Training results, served to clients without retraining.
+        """
+        self.instance = instance
+        self.metrics = metrics or {}
+        self.error = None
+        self.ready = True
+
+    def mark_failed(self, message):
+        """Record a client-safe failure message."""
+        self.ready = False
+        self.error = message
+
+    def reset(self):
+        """Return to the untrained state (used by tests)."""
+        self.instance = None
+        self.metrics = {}
+        self.ready = False
+        self.error = None
+
+    def as_status(self):
+        """The payload shape the frontend polls. Do not change casually."""
+        return {
+            "ready": self.ready,
+            "error": self.error,
+            "initializing": self.instance is not None and not self.ready,
+        }
+
+
+state = AnalyticsState()
 
 
 def initialize_pokemon_analytics():
-    """Initialize the analytics instance with Pokemon data (blocking)."""
-    global pokemon_analytics, analytics_ready, analytics_error
+    """Build and publish the analytics instance (blocking).
+
+    Returns:
+        True when analytics are ready to serve.
+    """
     try:
         all_pokemon = Pokemon.query.all()
 
@@ -85,19 +139,21 @@ def initialize_pokemon_analytics():
 
         df = pd.DataFrame(pokemon_data)
 
-        pokemon_analytics = PokemonAnalytics()
-        pokemon_analytics.load_data(data=df)
-        pokemon_analytics.clean_data()
-        pokemon_analytics.train_predictive_models()
-        analytics_ready = True
-        analytics_error = None
+        analytics = PokemonAnalytics()
+        analytics.load_data(data=df)
+        analytics.clean_data()
+        metrics = analytics.train_predictive_models()
+        # Publish only once fully built, so no request can observe a
+        # half-initialised instance. Metrics are captured here so serving
+        # them later never triggers another training run.
+        state.mark_ready(analytics, metrics)
         logger.info("Analytics initialized successfully")
         return True
     except Exception as exc:
         # This value is surfaced to clients via /api/pokemon-analytics/status,
         # so it must stay generic — the underlying error has included raw SQL
         # such as "no such table: pokemon". Detail goes to the log only.
-        analytics_error = "Analytics are currently unavailable."
+        state.mark_failed("Analytics are currently unavailable.")
         # Warning level because this can happen on first startup before the DB
         # is initialized. ensure_analytics() will retry when needed.
         logger.warning("Analytics initialization deferred: %s", exc)
@@ -117,8 +173,7 @@ def ensure_analytics():
     Returns:
         True when analytics are ready to serve.
     """
-    global analytics_ready
-    if analytics_ready:
+    if state.ready:
         return True
 
     if not get_settings().analytics_auto_initialize:
@@ -128,9 +183,9 @@ def ensure_analytics():
         )
         return False
 
-    with _initialization_lock:
+    with state.lock:
         # Another thread may have finished while this one waited.
-        if analytics_ready:
+        if state.ready:
             return True
         logger.info("Analytics requested but not ready — training now.")
         return initialize_pokemon_analytics()
@@ -142,8 +197,8 @@ def with_analytics(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not ensure_analytics():
-            if analytics_error:
-                return jsonify({"error": analytics_error}), 500
+            if state.error:
+                return jsonify({"error": state.error}), 500
             return jsonify(
                 {"error": "Analytics still initializing, try again in a moment"}
             ), 503
@@ -156,16 +211,37 @@ def with_analytics(f):
 
 
 def get_combined_type_distribution():
-    """Count type occurrences across both type1 and type2 columns."""
-    type_counts = {}
-    all_pokemon = Pokemon.query.all()
-    for pkmn in all_pokemon:
-        types = [pkmn.type1]
-        if pkmn.type2:
-            types.append(pkmn.type2)
-        for type_ in types:
-            type_counts[type_] = type_counts.get(type_, 0) + 1
-    return type_counts
+    """Count type occurrences across both type1 and type2 columns.
+
+    A `GROUP BY` over the two type columns unioned together, rather than
+    hydrating all 801 rows to do the counting in Python.
+
+    Two details are load-bearing:
+
+    * The old code tested `if pkmn.type2:`, which skipped an empty string as
+      well as NULL. `IS NOT NULL` alone would start counting "" as a type.
+    * The caller builds its chart labels from `.keys()`, so key order is part
+      of the output. The old dict came out in order of first appearance while
+      scanning by id, type1 before type2 — reproduced here by ordering on the
+      smallest `ordinal`, which interleaves the two columns exactly that way.
+    """
+    primary = db.session.query(
+        Pokemon.type1.label("type_name"),
+        (Pokemon.id * 2).label("ordinal"),
+    )
+    secondary = db.session.query(
+        Pokemon.type2.label("type_name"),
+        (Pokemon.id * 2 + 1).label("ordinal"),
+    ).filter(Pokemon.type2.isnot(None), Pokemon.type2 != "")
+
+    both = primary.union_all(secondary).subquery()
+    rows = (
+        db.session.query(both.c.type_name, db.func.count().label("count"))
+        .group_by(both.c.type_name)
+        .order_by(db.func.min(both.c.ordinal))
+        .all()
+    )
+    return {row.type_name: row.count for row in rows}
 
 
 # ── Analytics API Routes ──
@@ -177,7 +253,7 @@ def get_combined_type_distribution():
 def get_pokemon_descriptive_stats():
     """Get comprehensive descriptive statistics."""
     try:
-        stats = pokemon_analytics.get_descriptive_stats()
+        stats = state.instance.get_descriptive_stats()
         return jsonify(stats)
     except Exception:
         return internal_error("Request failed. Please try again.")
@@ -189,7 +265,7 @@ def get_pokemon_descriptive_stats():
 def get_pokemon_diagnostics():
     """Get diagnostic analysis and correlations."""
     try:
-        diagnostics = pokemon_analytics.diagnostic_analysis()
+        diagnostics = state.instance.diagnostic_analysis()
         return jsonify(diagnostics)
     except Exception:
         return internal_error("Request failed. Please try again.")
@@ -204,11 +280,11 @@ def get_pokemon_clustering():
         n_clusters = request.args.get("clusters", 5, type=int)
         viz_method = request.args.get("viz", None)
         if viz_method in ("pca", "tsne"):
-            clustering_results = pokemon_analytics.perform_clustering_with_viz(
+            clustering_results = state.instance.perform_clustering_with_viz(
                 n_clusters, viz_method
             )
         else:
-            clustering_results = pokemon_analytics.perform_clustering(n_clusters)
+            clustering_results = state.instance.perform_clustering(n_clusters)
         return jsonify(clustering_results)
     except Exception:
         return internal_error("Request failed. Please try again.")
@@ -225,7 +301,7 @@ def find_similar_pokemon():
             return jsonify({"error": "Missing 'name' in request body"}), 400
 
         n_similar = data.get("n_similar", 5)
-        results = pokemon_analytics.find_similar_pokemon(
+        results = state.instance.find_similar_pokemon(
             pokemon_name=data["name"],
             n_similar=n_similar,
         )
@@ -264,7 +340,7 @@ def find_closest_pokemon():
         type2 = data.get("type2")
         n_results = data.get("n_results", 5)
 
-        results = pokemon_analytics.find_closest_pokemon(
+        results = state.instance.find_closest_pokemon(
             stats=stats, type1=type1, type2=type2, n_results=n_results
         )
         return jsonify(
@@ -318,7 +394,7 @@ def predict_pokemon_performance():
             + pokemon_data["speed"]
         )
 
-        predictions = pokemon_analytics.predict_pokemon_stats(pokemon_data)
+        predictions = state.instance.predict_pokemon_stats(pokemon_data)
         return jsonify(predictions)
     except Exception:
         return internal_error("Request failed. Please try again.")
@@ -330,7 +406,7 @@ def predict_pokemon_performance():
 def optimize_pokemon_build():
     """Get optimal Pokemon build recommendations."""
     try:
-        optimal_build = pokemon_analytics.optimize_pokemon_build()
+        optimal_build = state.instance.optimize_pokemon_build()
         return jsonify(optimal_build)
     except Exception:
         return internal_error("Request failed. Please try again.")
@@ -345,7 +421,7 @@ def recommend_pokemon_team():
         preferences = request.json if request.json else {}
         if not isinstance(preferences, dict):
             return jsonify({"error": "Invalid preferences format"}), 400
-        team = pokemon_analytics.recommend_team(preferences)
+        team = state.instance.recommend_team(preferences)
         return jsonify(team)
     except ValueError:
         return jsonify({"error": "Invalid team preferences."}), 400
@@ -357,31 +433,27 @@ def recommend_pokemon_team():
 @jwt_required()
 @with_analytics
 def get_model_performance():
-    """Get model training results and performance metrics."""
-    try:
-        force_retrain = request.args.get("retrain", "false").lower() == "true"
-        performance = pokemon_analytics.train_predictive_models(force_retrain=force_retrain)
-        return jsonify(performance)
-    except Exception:
-        return internal_error("Request failed. Please try again.")
+    """Return the metrics recorded when the models were trained.
+
+    Deliberately never retrains. This endpoint used to accept `?retrain=true`,
+    which let any logged-in user start a full training run — and with a single
+    synchronous gunicorn worker that blocks the whole application. Retraining
+    is an operator action: `flask train --force`.
+    """
+    return jsonify(state.metrics)
 
 
 @analytics_bp.route("/api/pokemon-analytics/model-comparison", methods=["GET"])
 @jwt_required()
 @with_analytics
 def get_model_comparison():
-    """Compare all trained ensemble models."""
-    try:
-        performance = pokemon_analytics.train_predictive_models()
-        comparison = performance.get("ensemble_comparison", {})
-        return jsonify(
-            {
-                "ensemble_comparison": comparison,
-                "cached": performance.get("cached", False),
-            }
-        )
-    except Exception:
-        return internal_error("Request failed. Please try again.")
+    """Compare the trained ensemble models, from recorded metrics only."""
+    return jsonify(
+        {
+            "ensemble_comparison": state.metrics.get("ensemble_comparison", {}),
+            "cached": state.metrics.get("cached", False),
+        }
+    )
 
 
 @analytics_bp.route("/api/pokemon-analytics/type-coverage", methods=["POST"])
@@ -393,7 +465,7 @@ def get_type_coverage():
         data = request.json
         if not data or "team" not in data:
             return jsonify({"error": "Missing 'team' list in request body"}), 400
-        result = pokemon_analytics.calculate_team_type_coverage(data["team"])
+        result = state.instance.calculate_team_type_coverage(data["team"])
         return jsonify(result)
     except PokemonAnalyticsError as e:
         return jsonify({"error": str(e)}), 404
@@ -431,12 +503,7 @@ def pokemon_ml_playground():
 @jwt_required()
 def analytics_status():
     """Return analytics initialization status for frontend polling."""
-    global analytics_ready, analytics_error
-    return jsonify({
-        "ready": analytics_ready,
-        "error": analytics_error,
-        "initializing": pokemon_analytics is not None and not analytics_ready,
-    })
+    return jsonify(state.as_status())
 
 
 @analytics_bp.route("/pokemon-stats-v1", methods=["GET"])

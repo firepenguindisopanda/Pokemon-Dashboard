@@ -9,21 +9,32 @@ guarantees a throwaway SQLite file — the suite never touches a real database.
 import os
 import tempfile
 
-# Isolate the suite from the developer's shell BEFORE importing the app.
-# `Settings` reads these from the environment, so a shell that happens to have
-# DATABASE_URL or REDIS_URL exported would otherwise point tests at live
-# infrastructure and change what several of them assert.
-for _leaky_var in (
-    "DATABASE_URL",
-    "SQLALCHEMY_DATABASE_URI",
-    "REDIS_URL",
-    "DEBUG",
-    "FLASK_SECRET_KEY",
-    "JWT_SECRET_KEY",
-    "RATE_LIMIT_AUTH",
-    "RATE_LIMIT_ENABLED",
-):
-    os.environ.pop(_leaky_var, None)
+# Isolate the suite from its surroundings BEFORE importing the app.
+#
+# These are *overwritten*, not deleted. Deleting them only defends against a
+# developer who exported them in their shell; `Settings` also reads `.env` off
+# disk via pydantic-settings, and an absent variable just lets the file's value
+# through. Environment variables outrank the dotenv file, so assigning an
+# explicit safe value is what actually shadows it.
+#
+# This is not hypothetical. With a real `.env` present the suite bound the rate
+# limiter to the production Upstash instance — which is shared with another
+# application — and the rate-limit fixture calls `limiter.reset()`, deleting
+# keys there. `TestSuiteIsHermetic` in tests/test_config.py guards this.
+#
+# Empty string rather than a sentinel URL: `database_url` and `redis_url` are
+# Optional and the app treats falsy as unset, which is exactly the local
+# posture the suite expects.
+os.environ.update({
+    "DATABASE_URL": "",
+    "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+    "REDIS_URL": "",
+    "DEBUG": "true",
+    "FLASK_SECRET_KEY": "test-only-key-not-used-outside-the-suite-0123456789",
+    "JWT_SECRET_KEY": "test-only-jwt-key-not-used-outside-the-suite-01234",
+    "RATE_LIMIT_AUTH": "20 per minute",
+    "RATE_LIMIT_ENABLED": "true",
+})
 
 # Keep the suite out of the committed model cache. Training during tests used
 # to rewrite the tracked manifest.json, so `git status` came back dirty after

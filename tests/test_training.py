@@ -70,8 +70,8 @@ class TestImportIsSideEffectFree:
         exited, _code, output = run_python(
             "from App.app import app\n"
             "from App.blueprints import analytics\n"
-            "print('READY:', analytics.analytics_ready)\n"
-            "print('INSTANCE:', analytics.pokemon_analytics is not None)",
+            "print('READY:', analytics.state.ready)\n"
+            "print('INSTANCE:', analytics.state.instance is not None)",
             timeout=60,
             env_extra={"SQLALCHEMY_DATABASE_URI": sqlite_db},
         )
@@ -110,11 +110,15 @@ class TestLazyInitialisationIsGuarded:
             calls.append(1)
             entered.set()
             release.wait(timeout=5)
-            analytics_module.analytics_ready = True
+            analytics_module.state.ready = True
             return True
 
-        monkeypatch.setattr(analytics_module, "pokemon_analytics", None)
-        monkeypatch.setattr(analytics_module, "analytics_ready", False)
+        original = (
+            analytics_module.state.instance,
+            analytics_module.state.ready,
+            analytics_module.state.error,
+        )
+        analytics_module.state.reset()
         monkeypatch.setattr(analytics_module, "initialize_pokemon_analytics", slow_init)
 
         threads = [
@@ -128,10 +132,17 @@ class TestLazyInitialisationIsGuarded:
         for thread in threads:
             thread.join(timeout=10)
 
-        assert len(calls) == 1, (
-            f"{len(calls)} concurrent initialisations ran — training is not "
-            "mutex-guarded, so requests can pile up on it"
-        )
+        try:
+            assert len(calls) == 1, (
+                f"{len(calls)} concurrent initialisations ran — training is not "
+                "mutex-guarded, so requests can pile up on it"
+            )
+        finally:
+            (
+                analytics_module.state.instance,
+                analytics_module.state.ready,
+                analytics_module.state.error,
+            ) = original
 
 
 class TestStatusContractUnchanged:
@@ -251,3 +262,137 @@ class TestNoDeprecatedDatetimeUsage:
             and node.func.attr == "utcnow"
         ]
         assert offenders == [], f"datetime.utcnow() called at lines {offenders}"
+
+
+class TestAnalyticsStateObject:
+    """T16 — three module globals replaced by one lock-guarded object."""
+
+    def test_no_global_statements_remain_in_the_blueprint(self):
+        """`global` from multiple call sites is what made the races possible."""
+        source = pathlib.Path("App/blueprints/analytics.py").read_text()
+        tree = ast.parse(source)
+        offenders = [
+            node.lineno for node in ast.walk(tree) if isinstance(node, ast.Global)
+        ]
+        assert offenders == [], f"`global` statements remain at lines {offenders}"
+
+    def test_state_publishes_the_instance_before_flagging_ready(self):
+        """A reader must never see ready=True with no instance behind it."""
+        from App.blueprints.analytics import AnalyticsState
+
+        state = AnalyticsState()
+        assert state.ready is False and state.instance is None
+
+        sentinel = object()
+        state.mark_ready(sentinel)
+        assert state.instance is sentinel
+        assert state.ready is True
+        assert state.error is None
+
+    def test_failure_records_a_message_and_stays_not_ready(self):
+        from App.blueprints.analytics import AnalyticsState
+
+        state = AnalyticsState()
+        state.mark_failed("nope")
+        assert state.ready is False
+        assert state.error == "nope"
+
+    def test_status_payload_matches_the_polled_contract(self):
+        from App.blueprints.analytics import AnalyticsState
+
+        state = AnalyticsState()
+        assert state.as_status() == {
+            "ready": False,
+            "error": None,
+            "initializing": False,
+        }
+
+        state.mark_ready(object())
+        assert state.as_status()["ready"] is True
+        assert state.as_status()["initializing"] is False
+
+        state.reset()
+        assert state.as_status()["ready"] is False
+
+
+class TestRetrainingIsNotReachableOverHttp:
+    """C6 — `?retrain=true` let any logged-in user retrain the models.
+
+    Render runs gunicorn's default *single synchronous worker*, so a full
+    retrain blocks the entire application for its duration. One request was
+    enough to take the site down.
+    """
+
+    def test_no_http_handler_requests_a_forced_retrain(self):
+        """Static guard across every blueprint."""
+        offenders = []
+        for path in pathlib.Path("App/blueprints").glob("*.py"):
+            tree = ast.parse(path.read_text())
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+                if name != "train_predictive_models":
+                    continue
+                for keyword in node.keywords:
+                    if keyword.arg == "force_retrain":
+                        offenders.append(f"{path}:{node.lineno}")
+        assert offenders == [], (
+            f"a request handler can force a retrain, blocking the worker: {offenders}"
+        )
+
+    def test_retrain_query_parameter_is_ignored(self, auth_client, monkeypatch):
+        """The parameter must not reach the training code at all."""
+        from App.blueprints import analytics as analytics_module
+
+        calls = []
+
+        class Recorder:
+            def train_predictive_models(self, *args, **kwargs):
+                calls.append(kwargs)
+                return {"ensemble_comparison": {}, "cached": True}
+
+            def __getattr__(self, item):
+                raise AssertionError(f"unexpected call to {item}")
+
+        monkeypatch.setattr(analytics_module.state, "instance", Recorder())
+        monkeypatch.setattr(analytics_module.state, "ready", True)
+
+        response = auth_client.get(
+            "/api/pokemon-analytics/model-performance?retrain=true"
+        )
+        assert response.status_code == 200
+        assert calls == [], (
+            f"the endpoint still triggered training: {calls}"
+        )
+
+    def test_model_performance_serves_cached_metrics(self, auth_client, monkeypatch):
+        from App.blueprints import analytics as analytics_module
+
+        metrics = {"legendary_accuracy": 0.97, "ensemble_comparison": {"gb": 0.9}}
+        monkeypatch.setattr(analytics_module.state, "instance", object())
+        monkeypatch.setattr(analytics_module.state, "ready", True)
+        monkeypatch.setattr(analytics_module.state, "metrics", metrics)
+
+        payload = auth_client.get("/api/pokemon-analytics/model-performance").get_json()
+        assert payload == metrics
+
+    def test_model_comparison_serves_cached_metrics(self, auth_client, monkeypatch):
+        from App.blueprints import analytics as analytics_module
+
+        metrics = {"ensemble_comparison": {"gb": 0.9, "lr": 0.8}, "cached": True}
+        monkeypatch.setattr(analytics_module.state, "instance", object())
+        monkeypatch.setattr(analytics_module.state, "ready", True)
+        monkeypatch.setattr(analytics_module.state, "metrics", metrics)
+
+        payload = auth_client.get("/api/pokemon-analytics/model-comparison").get_json()
+        assert payload["ensemble_comparison"] == {"gb": 0.9, "lr": 0.8}
+
+    def test_force_retrain_remains_available_to_operators(self):
+        import wsgi  # noqa: F401
+
+        command = flask_app.cli.commands["train"]
+        assert any(p.name == "force" for p in command.params), (
+            "`flask train --force` is the supported way to retrain"
+        )
