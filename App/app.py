@@ -6,7 +6,6 @@ registers blueprints, and starts background analytics training.
 
 import datetime
 import logging
-import concurrent.futures
 from collections import namedtuple
 from flask import Flask, current_app, flash, g, redirect, render_template, request
 import redis
@@ -28,7 +27,7 @@ from App.extensions import limiter
 from App.config import get_settings
 from App.blueprints.auth import auth_bp
 from App.blueprints.pokemon import pokemon_bp
-from App.blueprints.analytics import analytics_bp, background_init_analytics
+from App.blueprints.analytics import analytics_bp
 from App.blueprints.arena import arena_bp
 from App.blueprints.quiz import quiz_bp
 
@@ -308,10 +307,16 @@ def create_app():
 
 app = create_app()
 
-# ── Start background analytics initialization ──
-with app.app_context():
-    background_thread = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    background_thread.submit(background_init_analytics, app)
+# NOTE: Model training deliberately does NOT happen here.
+#
+# It used to run in a non-daemon thread started at import, which meant:
+#   * any `flask` command against a seeded database finished its work and then
+#     never exited, hanging `flask db upgrade` in the deploy build step;
+#   * every gunicorn worker retrained independently on boot, racing on the
+#     module globals in App.blueprints.analytics.
+#
+# Training is now an explicit operation: `flask train`, or a lock-guarded lazy
+# initialisation on the first request that needs analytics.
 
 
 if __name__ == "__main__":

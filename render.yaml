@@ -15,24 +15,26 @@ services:
     plan: free
     branch: pokedex-app
 
-    # !! DO NOT DEPLOY THIS UNTIL T15 HAS LANDED !!
-    # `App/app.py` starts a non-daemon ML training thread at import time. Any
-    # `flask` command against a seeded database therefore completes its work
-    # and then never exits — measured: `flask db upgrade` finishes the
-    # migration in seconds but the process was still alive after 300s. Used
-    # as-is, this build step hangs until Render's build timeout.
-    # T15 moves training off the import path and fixes it.
-    #
-    # `flask db upgrade` MUST run before the app serves traffic. Application
+    # `flask db upgrade` MUST run before the app serves traffic: application
     # startup no longer creates tables (that was an unguarded race across
-    # workers), so without this step a deploy comes up against an empty schema
-    # and every database-backed request fails.
+    # workers), so without this a deploy comes up against an empty schema.
     #
-    # It lives in buildCommand because Render's preDeployCommand requires a
-    # paid instance type. On a paid plan, move it to preDeployCommand — that
-    # runs per release rather than per build, which is the correct place for a
-    # migration.
-    buildCommand: "pip install -r requirements.txt && flask db upgrade"
+    # `flask train` builds the ML models into this instance's disk (~30s).
+    # Artifacts are not committed: the cache key is a hash of the seeded data,
+    # so a repo-committed model only loads if the target database happens to
+    # hash identically — which it does not. Training here means the cache
+    # always matches the data actually being served.
+    #
+    # It is tolerated to fail: on a brand-new database the schema exists but
+    # has not been seeded yet, and there is nothing to train on. The first
+    # request needing analytics then trains lazily (mutex-guarded).
+    #
+    # `flask init` deliberately does NOT run here — it replaces seed data and
+    # would wipe real trainers on every deploy. Run it once, by hand.
+    #
+    # preDeployCommand would be the better home for the migration, but it
+    # requires a paid instance type.
+    buildCommand: "pip install -r requirements.txt && flask db upgrade && (flask train || echo 'training deferred to first request')"
 
     # Default sync worker, one process. Workstream B (chat) must change this to
     # `gunicorn --worker-class eventlet wsgi:app` — the sync worker cannot hold

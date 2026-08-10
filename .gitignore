@@ -28,4 +28,7 @@ __pycache__/
 
 # Runtime artifacts
 App/data.db
+# Model artifacts are built by `flask train`, not committed. They are
+# environment-specific: the cache key is a hash of the seeded data.
 App/models_cache/*.joblib
+App/models_cache/manifest.json

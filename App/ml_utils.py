@@ -6,8 +6,9 @@ Saves/loads trained models, scalers, and encoders with data hash versioning.
 import json
 import hashlib
 import logging
+import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import joblib
@@ -15,9 +16,37 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = Path(__file__).parent / 'models_cache'
-MODEL_DIR.mkdir(exist_ok=True)
+# Overridable so tests can force a cache miss and deployments can point at a
+# mounted volume. Defaults to the directory shipped with the package.
+MODEL_DIR = Path(os.environ.get('MODEL_CACHE_DIR') or (Path(__file__).parent / 'models_cache'))
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
 META_FILE = MODEL_DIR / 'manifest.json'
+
+
+def _timestamp() -> str:
+    """Current UTC timestamp for artifact versioning."""
+    return datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+
+
+def resolve_artifact_path(stored: str) -> Path:
+    """Turn a manifest path entry into a usable path.
+
+    Manifests now store bare filenames, resolved against MODEL_DIR. Older
+    manifests recorded absolute developer-machine paths, which cannot exist on
+    another host — fall back to the filename so those still load.
+
+    Args:
+        stored: The `path` value from a manifest entry.
+
+    Returns:
+        Path to the artifact inside MODEL_DIR.
+    """
+    candidate = Path(stored)
+    if candidate.is_absolute():
+        if candidate.exists():
+            return candidate
+        return MODEL_DIR / candidate.name
+    return MODEL_DIR / candidate
 
 
 def _load_manifest() -> dict[str, Any]:
@@ -69,7 +98,7 @@ def save_model(
     Returns:
         Version string for the saved model.
     """
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    timestamp = _timestamp()
     version = f"{name}_{timestamp}_{data_hash}"
     path = MODEL_DIR / f"{version}.joblib"
 
@@ -79,7 +108,7 @@ def save_model(
     manifest = _load_manifest()
     manifest[name] = {
         'version': version,
-        'path': str(path),
+        'path': path.name,
         'data_hash': data_hash,
         'metrics': metrics or {},
         'saved_at': timestamp,
@@ -94,7 +123,7 @@ def save_scalers_and_encoders(
     data_hash: str,
 ) -> None:
     """Save scalers and encoders alongside models."""
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    timestamp = _timestamp()
     scalers_path = MODEL_DIR / f"scalers_{data_hash}.joblib"
     encoders_path = MODEL_DIR / f"encoders_{data_hash}.joblib"
 
@@ -103,12 +132,12 @@ def save_scalers_and_encoders(
 
     manifest = _load_manifest()
     manifest['_scalers'] = {
-        'path': str(scalers_path),
+        'path': scalers_path.name,
         'data_hash': data_hash,
         'saved_at': timestamp,
     }
     manifest['_encoders'] = {
-        'path': str(encoders_path),
+        'path': encoders_path.name,
         'data_hash': data_hash,
         'saved_at': timestamp,
     }
@@ -139,7 +168,7 @@ def load_latest_model(name: str, expected_data_hash: str) -> Optional[Any]:
         )
         return None
 
-    model_path = Path(entry['path'])
+    model_path = resolve_artifact_path(entry['path'])
     if not model_path.exists():
         logger.warning("Cached model file missing: %s", model_path)
         return None
@@ -159,8 +188,8 @@ def load_scalers_and_encoders(
         if entry is None or entry.get('data_hash') != expected_data_hash:
             return None, None
 
-    scalers = joblib.load(manifest['_scalers']['path'])
-    encoders = joblib.load(manifest['_encoders']['path'])
+    scalers = joblib.load(resolve_artifact_path(manifest['_scalers']['path']))
+    encoders = joblib.load(resolve_artifact_path(manifest['_encoders']['path']))
     logger.info("Loaded scalers and encoders for data hash %s", expected_data_hash)
     return scalers, encoders
 

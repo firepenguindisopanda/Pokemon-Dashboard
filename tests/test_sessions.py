@@ -110,7 +110,8 @@ class TestGameplayStillWorks:
 
         result = auth_client.post(f"/arena/attack/{pokemon_id}").get_json()
         assert 10 <= result["damage"] <= 29
-        assert result["current_hp"] == encounter["max_hp"] - result["damage"]
+        # HP is clamped at zero — damage can exceed a low-HP Pokemon's total.
+        assert result["current_hp"] == max(0, encounter["max_hp"] - result["damage"])
 
     def test_session_survives_across_requests(self, auth_client):
         auth_client.get("/arena/encounter")

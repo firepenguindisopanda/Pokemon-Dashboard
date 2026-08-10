@@ -4,6 +4,7 @@ import ast
 import csv
 import logging
 from flask import Blueprint, request, redirect, render_template, url_for, flash, jsonify
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import (
     create_access_token,
@@ -72,6 +73,29 @@ def clear_seed_data():
     db.session.commit()
 
 
+def _resync_identity_sequences():
+    """Point Postgres identity sequences past the rows just inserted.
+
+    Pokemon rows are seeded with explicit ids, which does not advance the
+    sequence. Left alone, the next auto-generated id would collide with an
+    existing row. SQLite has no sequences and needs nothing here.
+    """
+    if db.engine.dialect.name != "postgresql":
+        return
+
+    for table in ("pokemon", "user", "user_pokemon", "message"):
+        db.session.execute(
+            text(
+                "SELECT setval("
+                "  pg_get_serial_sequence(:table, 'id'),"
+                "  COALESCE((SELECT MAX(id) FROM {table}), 1)"
+                ")".format(table=f'"{table}"')
+            ),
+            {"table": f'"{table}"'},
+        )
+    db.session.commit()
+
+
 def initialize_db(csv_path="pokemon.csv"):
     """Seed the database with Pokemon data and default users.
 
@@ -84,7 +108,7 @@ def initialize_db(csv_path="pokemon.csv"):
     clear_seed_data()
     with open(csv_path, newline="", encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
-        for row in reader:
+        for seed_id, row in enumerate(reader, start=1):
             if row["height_m"] == "":
                 row["height_m"] = None
             if row["weight_kg"] == "":
@@ -104,6 +128,12 @@ def initialize_db(csv_path="pokemon.csv"):
                 capture_rate = int(capture_rate_str)
 
             pokemon = Pokemon(
+                # Assign ids explicitly. Postgres does not reset a SERIAL
+                # sequence when rows are deleted, so a second `flask init`
+                # would otherwise renumber every Pokemon (observed: ids
+                # 1603-2403), breaking the fixed ids used just below and any
+                # bookmarked /app/<id> URL.
+                id=seed_id,
                 name=row["name"],
                 pokedex_number=row["pokedex_number"],
                 attack=row["attack"],
@@ -147,6 +177,8 @@ def initialize_db(csv_path="pokemon.csv"):
         bob.catch_pokemon(1, "Benny")
         bob.catch_pokemon(25, "Saul")
         nick.catch_pokemon(120, "Buddy")
+
+    _resync_identity_sequences()
 
 
 def login_user(username, password):

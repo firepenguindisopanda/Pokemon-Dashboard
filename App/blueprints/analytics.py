@@ -1,11 +1,13 @@
 """Analytics blueprint — ML API endpoints and analytics dashboard pages."""
 
 import logging
+import threading
 from functools import wraps
 from flask import Blueprint, request, render_template, jsonify
 from flask_jwt_extended import jwt_required
 from App.models import db, Pokemon
 from App.lib import PokemonAnalytics, PokemonAnalyticsError
+from App.config import get_settings
 from App.constants import TYPE_COLORS
 import pandas as pd
 
@@ -37,6 +39,9 @@ def internal_error(context, status=500):
 pokemon_analytics = None
 analytics_ready = False
 analytics_error = None
+
+# Serialises training so concurrent requests cannot each start their own run.
+_initialization_lock = threading.Lock()
 
 
 def initialize_pokemon_analytics():
@@ -99,24 +104,36 @@ def initialize_pokemon_analytics():
         return False
 
 
-def background_init_analytics(app):
-    """Initialize analytics in a background thread at startup."""
-    logger.info("Starting background analytics initialization...")
-    with app.app_context():
-        initialize_pokemon_analytics()
-
-
 def ensure_analytics():
-    """Ensure analytics are initialized, with a brief wait for background init."""
-    global pokemon_analytics, analytics_ready
+    """Make analytics available, training once if necessary.
+
+    Guarded by a lock: without it, concurrent requests each start their own
+    training run, and several gunicorn threads would race on the module
+    globals. Whoever wins does the work; the rest wait and observe the result.
+
+    Set ANALYTICS_AUTO_INITIALIZE=false to require `flask train` instead, so a
+    request can never pay for a cold model cache.
+
+    Returns:
+        True when analytics are ready to serve.
+    """
+    global analytics_ready
     if analytics_ready:
         return True
-    if pokemon_analytics is None:
+
+    if not get_settings().analytics_auto_initialize:
         logger.warning(
-            "Analytics requested before background init completed — training synchronously"
+            "Analytics are not initialized and auto-initialization is disabled. "
+            "Run `flask train`."
         )
+        return False
+
+    with _initialization_lock:
+        # Another thread may have finished while this one waited.
+        if analytics_ready:
+            return True
+        logger.info("Analytics requested but not ready — training now.")
         return initialize_pokemon_analytics()
-    return False
 
 
 def with_analytics(f):

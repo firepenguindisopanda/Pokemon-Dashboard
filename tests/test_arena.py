@@ -62,7 +62,9 @@ def test_arena_attack_reduces_hp(auth_client):
     assert 'damage' in data
     assert 10 <= data['damage'] <= 29
     assert 'current_hp' in data
-    assert data['current_hp'] == enc_data['max_hp'] - data['damage']
+    # HP is clamped at zero: damage is 10-29 and plenty of Pokemon have
+    # fewer than 29 HP, so a raw subtraction goes negative.
+    assert data['current_hp'] == max(0, enc_data['max_hp'] - data['damage'])
 
 
 def test_arena_catch_without_pokeballs(auth_client):

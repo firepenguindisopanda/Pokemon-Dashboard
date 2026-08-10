@@ -25,6 +25,12 @@ for _leaky_var in (
 ):
     os.environ.pop(_leaky_var, None)
 
+# Keep the suite out of the committed model cache. Training during tests used
+# to rewrite the tracked manifest.json, so `git status` came back dirty after
+# every run — and a manifest committed in that state points at artifacts that
+# were never added to git.
+os.environ["MODEL_CACHE_DIR"] = tempfile.mkdtemp(prefix="pokemon-model-cache-")
+
 import fakeredis  # noqa: E402
 import pytest  # noqa: E402
 from flask.testing import FlaskClient  # noqa: E402
