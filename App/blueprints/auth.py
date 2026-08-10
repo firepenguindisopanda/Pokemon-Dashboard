@@ -83,15 +83,16 @@ def _resync_identity_sequences():
     if db.engine.dialect.name != "postgresql":
         return
 
+    # Table names are a fixed literal tuple, never user input.
     for table in ("pokemon", "user", "user_pokemon", "message"):
+        quoted = f'"{table}"'
         db.session.execute(
             text(
-                "SELECT setval("
-                "  pg_get_serial_sequence(:table, 'id'),"
-                "  COALESCE((SELECT MAX(id) FROM {table}), 1)"
-                ")".format(table=f'"{table}"')
-            ),
-            {"table": f'"{table}"'},
+                f"SELECT setval("
+                f"  pg_get_serial_sequence('{quoted}', 'id'),"
+                f"  COALESCE((SELECT MAX(id) FROM {quoted}), 1)"
+                f")"
+            )
         )
     db.session.commit()
 

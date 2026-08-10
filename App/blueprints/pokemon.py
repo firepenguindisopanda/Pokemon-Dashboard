@@ -58,7 +58,20 @@ def home_page(pokemon_id=1):
 
     pokemon_obj = db.session.get(Pokemon, pokemon_id)
     if pokemon_obj is None:
-        pokemon_obj = db.session.get(Pokemon, 1)
+        # Fall back to whatever exists rather than assuming id 1. The seeder
+        # now pins ids, but an unseeded or partially seeded database must not
+        # take the whole page down with an AttributeError.
+        pokemon_obj = Pokemon.query.order_by(Pokemon.id).first()
+    if pokemon_obj is None:
+        flash("No Pokemon data available yet. Seed the database with `flask init`.")
+        return render_template(
+            "home.html",
+            list_of_pokemon=[],
+            selected_pokemon_id=None,
+            pokemon=None,
+            usr_pkmons=[],
+            pokeballs=getattr(current_user, "pokeballs", 0),
+        )
     pokemon = pokemon_obj.get_json()
 
     user_pokemons = UserPokemon.query.filter_by(
