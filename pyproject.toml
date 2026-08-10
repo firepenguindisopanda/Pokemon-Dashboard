@@ -2,6 +2,10 @@
 line-length = 100
 target-version = "py312"
 
+# Alembic writes these from its own templates. Their formatting is the tool's
+# concern, and every generated migration would otherwise need hand-editing.
+exclude = ["migrations"]
+
 [tool.ruff.lint]
 # E/W  pycodestyle   — formatting and whitespace
 # F    pyflakes      — unused imports, undefined names, dead locals

@@ -15,7 +15,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     unset_refresh_cookies,
 )
-from App.models import db, User, Pokemon
+from App.models import db, User, Pokemon, UserPokemon, Message
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +59,27 @@ def _parse_abilities(raw, pokemon_name, line_number):
     return abilities
 
 
+def clear_seed_data():
+    """Delete every row this seeder owns, in foreign-key-safe order.
+
+    Rows only — the schema belongs to `flask db upgrade`. Without this,
+    re-running the seeder would violate the unique constraint on username.
+    """
+    for model in (UserPokemon, Message, User, Pokemon):
+        db.session.query(model).delete()
+    db.session.commit()
+
+
 def initialize_db(csv_path="pokemon.csv"):
-    """Drop all tables, recreate, and seed with Pokemon data + default users.
+    """Seed the database with Pokemon data and default users.
+
+    Replaces any existing rows. This does **not** create or drop tables —
+    run `flask db upgrade` first to build the schema.
 
     Args:
         csv_path: Path to the Pokemon seed CSV. Overridable for tests.
     """
-    db.drop_all()
-    db.create_all()
+    clear_seed_data()
     with open(csv_path, newline="", encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:

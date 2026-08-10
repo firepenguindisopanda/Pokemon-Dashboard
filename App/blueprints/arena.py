@@ -3,7 +3,8 @@
 import random
 import logging
 from flask import Blueprint, jsonify, session
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from App.auth_helpers import current_user_id
 from App.models import db, User, Pokemon, UserPokemon
 
 logger = logging.getLogger(__name__)
@@ -21,10 +22,8 @@ def calculate_catch_chance(current_hp, max_hp, capture_rate):
 @arena_bp.route("/arena/encounter")
 @jwt_required()
 def encounter():
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
 
     owned_ids = [up.pokemon_id for up in user.pokemon] if user.pokemon else []
 
@@ -57,10 +56,8 @@ def encounter():
 @arena_bp.route("/arena/current")
 @jwt_required()
 def current_encounter():
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
 
     pokemon_id = session.get("arena_pokemon_id")
     current_hp = session.get("arena_hp")
@@ -112,10 +109,8 @@ def attack(pokemon_id):
 @arena_bp.route("/arena/catch/<int:pokemon_id>", methods=["POST"])
 @jwt_required()
 def catch(pokemon_id):
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
 
     stored_id = session.get("arena_pokemon_id")
     current_hp = session.get("arena_hp")

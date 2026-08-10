@@ -10,6 +10,7 @@ import concurrent.futures
 from collections import namedtuple
 from flask import Flask, current_app, g, redirect, request, flash
 from flask_cors import CORS
+from flask_migrate import Migrate
 from flask_jwt_extended import (
     JWTManager, current_user,
     create_access_token,
@@ -18,10 +19,11 @@ from flask_jwt_extended import (
     unset_refresh_cookies,
 )
 from sqlalchemy import inspect
-from sqlalchemy.exc import OperationalError, TimeoutError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError, TimeoutError
 from App.models import db, User
+from App.auth_helpers import coerce_user_id
 from App.config import get_settings
-from App.blueprints.auth import auth_bp, initialize_db
+from App.blueprints.auth import auth_bp
 from App.blueprints.pokemon import pokemon_bp
 from App.blueprints.analytics import analytics_bp, background_init_analytics
 from App.blueprints.arena import arena_bp
@@ -41,7 +43,12 @@ def add_claims_to_access_token(user):
 
 
 def user_identity_lookup(user):
-    return user.id
+    """Return the JWT subject claim for a user.
+
+    Must be a string: RFC 7519 requires it and PyJWT >= 2.10 rejects tokens
+    with a non-string ``sub`` at decode time.
+    """
+    return str(user.id)
 
 
 def user_lookup_callback(_jwt_header, jwt_data):
@@ -51,7 +58,7 @@ def user_lookup_callback(_jwt_header, jwt_data):
     creating a MinimalUser from the token claims so the request can
     still resolve current_user without crashing.
     """
-    identity = jwt_data["sub"]
+    identity = coerce_user_id(jwt_data["sub"])
 
     # Check request-scoped cache first
     if hasattr(g, "cached_user"):
@@ -105,20 +112,28 @@ def create_app():
 
     # ── Initialize Extensions ──
     db.init_app(app)
+    Migrate(app, db)
     CORS(app, origins=settings.cors_origins)
 
-    # ── Auto-initialize empty database ──
+    # ── Schema readiness check ──
+    # Schema creation belongs to `flask db upgrade`, not to app startup.
+    # Creating tables here meant a boot could silently reshape the database,
+    # and under multiple workers several processes would race to do it.
+    # Report the problem loudly instead of papering over it.
     with app.app_context():
-        inspector = inspect(db.engine)
-        if not inspector.get_table_names():
-            logger.info("Database is empty — creating tables and seeding...")
-            initialize_db()
-            logger.info("Database initialized and seeded with Pokemon data.")
+        try:
+            table_count = len(inspect(db.engine).get_table_names())
+        except SQLAlchemyError as exc:
+            logger.error("Could not inspect the database at startup: %s", exc)
         else:
-            logger.info(
-                "Database already initialized (%d tables).",
-                len(inspector.get_table_names()),
-            )
+            if table_count == 0:
+                logger.error(
+                    "Database has no tables. Run `flask db upgrade` to create the "
+                    "schema, then `flask init` to seed it. The app will start but "
+                    "every request touching the database will fail."
+                )
+            else:
+                logger.info("Database ready (%d tables).", table_count)
 
     jwt = JWTManager(app)
 
@@ -150,7 +165,7 @@ def create_app():
         try:
             from flask_jwt_extended import decode_token
             refresh_data = decode_token(refresh_token_str)
-            identity = refresh_data["sub"]
+            identity = coerce_user_id(refresh_data["sub"])
 
             user = db.session.get(User, identity)
             if user is None:

@@ -3,7 +3,8 @@
 import random
 import logging
 from flask import Blueprint, jsonify, render_template, request, session
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from App.auth_helpers import current_user_id
 from App.models import db, User, Pokemon
 
 logger = logging.getLogger(__name__)
@@ -65,20 +66,16 @@ def generate_question():
 @quiz_bp.route("/quiz")
 @jwt_required()
 def quiz_page():
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
     return render_template("quiz.html", user=user)
 
 
 @quiz_bp.route("/api/quiz/question")
 @jwt_required()
 def get_question():
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
 
     if user.quiz_questions_answered >= 10:
         earned = session.pop("quiz_correct_count", 0)
@@ -105,10 +102,8 @@ def get_question():
 @quiz_bp.route("/api/quiz/answer", methods=["POST"])
 @jwt_required()
 def submit_answer():
-    user_id = get_jwt_identity()
+    user_id = current_user_id()
     user = db.session.get(User, user_id)
-    if isinstance(user_id, dict):
-        user_id = user_id.get("id", user_id)
 
     data = request.get_json()
     correct = data.get("answer") == session.get("quiz_current_answer")

@@ -38,7 +38,10 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    # A Werkzeug scrypt hash ("scrypt:32768:8:1$<salt>$<128 hex>") is 162
+    # characters. SQLite ignores VARCHAR limits but Postgres enforces them, so
+    # this must stay comfortably wider than the current hash format.
+    password = db.Column(db.String(255), nullable=False)
     pokeballs = db.Column(db.Integer, default=10, nullable=False)
     quiz_questions_answered = db.Column(db.Integer, default=0, nullable=False)
     pokemon = db.relationship('UserPokemon', backref='user')
@@ -80,8 +83,14 @@ class User(db.Model):
         return None
     
     def set_password(self, password):
-        """Create hashed password."""
-        self.password = generate_password_hash(password, method='sha256')
+        """Create hashed password using Werkzeug's default algorithm (scrypt).
+
+        The method is deliberately not pinned: Werkzeug's default tracks
+        current practice, and pinning it here is what left this app on a
+        single unsalted SHA-256 pass. Werkzeug 3 removed 'sha256' entirely,
+        for both hashing and verification.
+        """
+        self.password = generate_password_hash(password)
     
     def check_password(self, password):
         """Check hashed password."""

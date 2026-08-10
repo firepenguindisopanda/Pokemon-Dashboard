@@ -1,9 +1,12 @@
 """Tests for refresh token endpoint and DB-resilient user lookup."""
 
+import pytest
 from flask_jwt_extended import decode_token
+from werkzeug.security import generate_password_hash
 
 from App.app import app, db, MinimalUser
-from tests.helpers import login
+from App.models import User
+from tests.helpers import auth_cookies, login
 
 
 
@@ -15,7 +18,7 @@ class TestRefreshToken:
         login(client, 'bob', 'bobpass')
 
         # Check refresh token cookie exists
-        assert 'refresh_token' in {c.name: c.value for c in client.cookie_jar}
+        assert 'refresh_token' in auth_cookies(client)
 
         # Call refresh endpoint
         rv = client.post('/api/auth/refresh')
@@ -24,7 +27,7 @@ class TestRefreshToken:
         assert data['status'] == 'success'
 
         # Verify new access_token cookie was set
-        cookies = {c.name: c.value for c in client.cookie_jar}
+        cookies = auth_cookies(client)
         assert 'access_token' in cookies
 
     def test_refresh_without_token_returns_401(self, client):
@@ -36,7 +39,7 @@ class TestRefreshToken:
 
     def test_refresh_with_expired_token_returns_401(self, client):
         """Test with an intentionally invalid refresh token."""
-        client.set_cookie('localhost', 'refresh_token', 'expired-fake-token')
+        client.set_cookie('refresh_token', 'expired-fake-token')
         rv = client.post('/api/auth/refresh')
         assert rv.status_code == 401
         data = rv.get_json()
@@ -72,7 +75,7 @@ class TestUserLookupResilience:
 
         with app.app_context():
             jwt_data = {
-                "sub": 1,
+                "sub": "1",
                 "claims": {"username": "bob", "email": "bob@mail.com"}
             }
             from App.app import user_lookup_callback
@@ -102,7 +105,7 @@ class TestTokenClaims:
         """Login should set both access_token and refresh_token cookies."""
         login(client, 'bob', 'bobpass')
 
-        cookies = {c.name: c.value for c in client.cookie_jar}
+        cookies = auth_cookies(client)
         assert 'access_token' in cookies
         assert 'refresh_token' in cookies
 
@@ -114,7 +117,7 @@ class TestTokenClaims:
             follow_redirects=True
         )
 
-        cookies = {c.name: c.value for c in client.cookie_jar}
+        cookies = auth_cookies(client)
         assert 'access_token' in cookies
         assert 'refresh_token' in cookies
 
@@ -122,7 +125,7 @@ class TestTokenClaims:
         """Login and decode the access token to check username claim."""
         login(client, 'bob', 'bobpass')
 
-        cookies = {c.name: c.value for c in client.cookie_jar}
+        cookies = auth_cookies(client)
         access_token = cookies.get('access_token')
         assert access_token is not None
 
@@ -131,3 +134,53 @@ class TestTokenClaims:
             # Additional claims are at top level (not nested under "claims")
             assert decoded.get('username') == 'bob'
             assert decoded.get('email') == 'bob@mail.com'
+
+
+class TestPasswordStorage:
+    """A3 — hashing moved from a single SHA-256 pass to Werkzeug's scrypt default.
+
+    A scrypt hash is 162 characters. SQLite ignores VARCHAR limits, so an
+    undersized column is invisible locally and only fails once the app runs on
+    Postgres — which is exactly the cutover in T10. These tests assert the
+    declared column width so the mismatch cannot reach production.
+    """
+
+    def test_password_column_is_wide_enough_for_a_scrypt_hash(self):
+        """The declared width must hold a real hash, with room to spare."""
+        declared = User.__table__.c.password.type.length
+        sample = generate_password_hash('any-password')
+        assert declared >= len(sample), (
+            f"User.password is String({declared}) but a scrypt hash is "
+            f"{len(sample)} characters — Postgres will reject this on insert"
+        )
+
+    def test_password_column_has_headroom_for_stronger_future_defaults(self):
+        """Werkzeug's default may get more expensive; leave margin."""
+        assert User.__table__.c.password.type.length >= 255
+
+    def test_new_hashes_use_scrypt_and_round_trip(self):
+        user = User(username='hashcheck', email='h@example.com', password='correct horse')
+        assert user.password.startswith('scrypt:'), user.password[:32]
+        assert user.check_password('correct horse') is True
+        assert user.check_password('wrong horse') is False
+
+    def test_hash_is_salted_so_equal_passwords_differ(self):
+        a = User(username='a', email='a@example.com', password='same-password')
+        b = User(username='b', email='b@example.com', password='same-password')
+        assert a.password != b.password, "identical passwords produced identical hashes"
+
+    def test_sha256_is_no_longer_reachable(self):
+        """Werkzeug 3 removed it; assert we never reintroduce the pin."""
+        with pytest.raises(ValueError):
+            generate_password_hash('x', method='sha256')
+
+    def test_seeded_users_are_stored_with_scrypt(self, client):
+        """`flask init` must produce hashes that fit and verify."""
+        with app.app_context():
+            declared = User.__table__.c.password.type.length
+            for username, password in (('bob', 'bobpass'), ('nick', 'nickpass')):
+                user = User.query.filter_by(username=username).first()
+                assert user is not None
+                assert user.password.startswith('scrypt:')
+                assert len(user.password) <= declared
+                assert user.check_password(password) is True

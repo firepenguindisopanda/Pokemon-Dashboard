@@ -1,6 +1,6 @@
 from App.app import app, db
 from App.models import User, UserPokemon, Pokemon
-from tests.helpers import login, signup
+from tests.helpers import auth_cookies, login, signup
 
 
 
@@ -44,7 +44,7 @@ def test_signup_and_login_flow(client):
     assert b'Account created' in rv.data
 
     # Verify both cookies are set after signup
-    cookies = {c.name: c.value for c in client.cookie_jar}
+    cookies = auth_cookies(client)
     assert 'access_token' in cookies
     assert 'refresh_token' in cookies, "Signup should set refresh_token cookie"
 
@@ -53,7 +53,7 @@ def test_signup_and_login_flow(client):
     assert b'Logged in successfully.' in rv2.data
 
     # Verify refresh token is set after login too
-    cookies2 = {c.name: c.value for c in client.cookie_jar}
+    cookies2 = auth_cookies(client)
     assert 'access_token' in cookies2
     assert 'refresh_token' in cookies2, "Login should set refresh_token cookie"
 
