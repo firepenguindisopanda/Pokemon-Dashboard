@@ -74,6 +74,8 @@ class Settings(BaseSettings):
 
     # ── Flask Core ──
     flask_secret_key: str = "change-me-in-production"
+    # DATABASE_URL is what hosting providers inject; it wins when present.
+    database_url: Optional[str] = None
     sqlalchemy_database_uri: str = "sqlite:///data.db"
     sqlalchemy_track_modifications: bool = False
     debug: bool = True
@@ -84,13 +86,38 @@ class Settings(BaseSettings):
     jwt_refresh_token_expires_days: int = 7        # 7 days
     jwt_token_leeway_seconds: int = 30             # clock skew tolerance
     jwt_cookie_secure: bool = False  # False in dev, True on production HTTPS
-    jwt_cookie_csrf_protect: bool = False
+    # Auth lives in cookies, so the browser attaches it to cross-site requests
+    # too. Double-submit CSRF tokens are what stop another origin forging
+    # state changes. Defaults on: opting out must be deliberate.
+    jwt_cookie_csrf_protect: bool = True
+    # Server-rendered forms cannot set headers, so also accept the token as a
+    # hidden `csrf_token` field.
+    jwt_csrf_check_form: bool = True
     jwt_token_location: list[str] = ["cookies"]
     jwt_header_name: str = "Cookie"
     jwt_access_cookie_name: str = "access_token"
     jwt_refresh_cookie_name: str = "refresh_token"
 
+    # ── Sessions / Redis ──
+    # Native Redis URL (rediss:// for TLS). Upstash's REST URL and token are a
+    # different, HTTP-based API and will not work here.
+    redis_url: Optional[str] = None
+    session_key_prefix: str = "pokemon-dashboard:session:"
+
+    # ── Rate limiting ──
+    # Applies to the authentication endpoints only. Generous enough that a
+    # trainer fumbling a password is never affected, tight enough that
+    # credential grinding is impractical.
+    rate_limit_auth: str = "20 per minute"
+    rate_limit_enabled: bool = True
+    # The Redis instance may be shared with other applications, and
+    # Flask-Limiter's default keys carry no application identifier.
+    rate_limit_key_prefix: str = "pokemon-dashboard"
+
     # ── CORS ──
+    # Comma-separated origin list. "*" is rejected when DEBUG is false: auth
+    # rides in cookies, so a permissive origin policy hands every authenticated
+    # endpoint to any site a trainer happens to visit.
     cors_origins: str = "*"
 
     # ── Database Pool (used when switching to PostgreSQL) ──
@@ -132,9 +159,24 @@ class Settings(BaseSettings):
             if reason:
                 problems.append(f"  - {field_name} {reason}")
 
+        if not self.redis_url:
+            problems.append(
+                "  - REDIS_URL is not set, so sessions would fall back to Flask's "
+                "signed cookie. That cookie is readable by the client, which "
+                "exposes quiz answers and arena state."
+            )
+
+        if "*" in self.cors_origin_list:
+            problems.append(
+                "  - CORS_ORIGINS is '*'. Authentication rides in cookies, so a "
+                "wildcard origin exposes every authenticated endpoint to any "
+                "site. Set it to the deployed origin, e.g. "
+                "https://your-app.onrender.com"
+            )
+
         if problems:
             raise ValueError(
-                "Refusing to start: DEBUG is false but these secrets are not "
+                "Refusing to start: DEBUG is false but the configuration is not "
                 "production-safe:\n"
                 + "\n".join(problems)
                 + "\n\n"
@@ -142,6 +184,69 @@ class Settings(BaseSettings):
             )
 
         return self
+
+    @property
+    def database_uri(self) -> str:
+        """The database URI to connect with, normalised for SQLAlchemy 2.
+
+        ``DATABASE_URL`` takes precedence so a hosting provider can inject the
+        connection string without the app needing to know its own environment.
+
+        Returns:
+            A SQLAlchemy-compatible URI. The legacy ``postgres://`` scheme is
+            rewritten to ``postgresql://`` — SQLAlchemy 2 refuses the former,
+            and several providers still hand it out.
+        """
+        uri = self.database_url or self.sqlalchemy_database_uri
+        legacy_prefix = "postgres://"
+        if uri.startswith(legacy_prefix):
+            uri = f"postgresql://{uri[len(legacy_prefix):]}"
+        return uri
+
+    @property
+    def engine_options(self) -> dict:
+        """Engine options for SQLAlchemy, tailored to the target dialect.
+
+        ``pool_pre_ping`` matters most: Neon's pooled endpoint closes idle
+        connections, and without a liveness check the first query after an
+        idle period fails with a stale-connection error.
+
+        Pool sizing is only meaningful for server-backed databases. SQLite's
+        in-memory pool rejects ``max_overflow`` outright, so it is omitted
+        rather than guessed at.
+
+        Returns:
+            Keyword arguments suitable for ``create_engine``.
+        """
+        options = {"pool_pre_ping": self.database_pool_pre_ping}
+
+        if not self.database_uri.startswith("sqlite"):
+            options["pool_size"] = self.database_pool_size
+            options["max_overflow"] = self.database_max_overflow
+
+        return options
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Allowed CORS origins, parsed from the comma-separated setting.
+
+        Returns:
+            One entry per origin, whitespace stripped and blanks dropped.
+        """
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def rate_limit_storage_uri(self) -> str:
+        """Where rate-limit counters live.
+
+        Redis when available: in-memory counters reset on every restart and are
+        per-process, so a limit would be trivially bypassed by waiting for a
+        deploy or by hitting a different worker.
+
+        Returns:
+            A limits-compatible storage URI.
+        """
+        return self.redis_url or "memory://"
 
     @property
     def jwt_access_expires_timedelta(self) -> datetime.timedelta:

@@ -23,11 +23,19 @@ KNOWN_PLACEHOLDERS = [
 
 
 def build_settings(**overrides):
-    """Construct Settings from explicit values only, ignoring any .env file."""
+    """Construct Settings from explicit values only, ignoring any .env file.
+
+    Defaults to a valid *production* configuration so each test can make
+    exactly one thing invalid.
+    """
     values = {
         "debug": False,
         "flask_secret_key": secrets.token_urlsafe(48),
         "jwt_secret_key": secrets.token_urlsafe(48),
+        # Required with debug off — sessions must not fall back to cookies.
+        "redis_url": "rediss://default:pw@example.upstash.io:6379",
+        # Required with debug off — a wildcard origin is rejected.
+        "cors_origins": "https://example.onrender.com",
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
@@ -125,6 +133,89 @@ class TestStartupFailureIsReadable:
             assert "Value error," not in printed, "pydantic noise leaked into the message"
         finally:
             get_settings.cache_clear()
+
+
+class TestDatabaseUriResolution:
+    """A12 — production must be able to point at Neon via DATABASE_URL."""
+
+    def test_database_url_takes_precedence(self):
+        settings = build_settings(
+            database_url="postgresql://u:p@host/db",
+            sqlalchemy_database_uri="sqlite:///data.db",
+        )
+        assert settings.database_uri == "postgresql://u:p@host/db"
+
+    def test_falls_back_to_sqlite_for_local_development(self):
+        settings = build_settings(sqlalchemy_database_uri="sqlite:///data.db")
+        assert settings.database_uri == "sqlite:///data.db"
+
+    def test_legacy_postgres_scheme_is_normalised(self):
+        """SQLAlchemy 2 rejects `postgres://`; several providers still emit it."""
+        settings = build_settings(database_url="postgres://u:p@host/db")
+        assert settings.database_uri.startswith("postgresql://")
+
+    def test_normalising_preserves_credentials_and_query_string(self):
+        """Neon's URL carries sslmode and channel_binding — dropping them breaks TLS."""
+        settings = build_settings(
+            database_url="postgres://user:pw@ep-x.neon.tech/neondb"
+                         "?sslmode=require&channel_binding=require"
+        )
+        assert settings.database_uri == (
+            "postgresql://user:pw@ep-x.neon.tech/neondb"
+            "?sslmode=require&channel_binding=require"
+        )
+
+    def test_postgresql_scheme_is_left_untouched(self):
+        url = "postgresql://u:p@host/db?sslmode=require"
+        assert build_settings(database_url=url).database_uri == url
+
+
+class TestEngineOptions:
+    """T9 — pool settings existed in config but were never applied to any engine."""
+
+    def test_pool_pre_ping_is_always_enabled(self):
+        """Neon's pooler drops idle connections; without this the next query fails."""
+        assert build_settings().engine_options["pool_pre_ping"] is True
+
+    def test_pool_sizing_is_applied_for_server_backed_databases(self):
+        options = build_settings(database_url="postgresql://u:p@host/db").engine_options
+        assert options["pool_size"] == 5
+        assert options["max_overflow"] == 10
+
+    def test_pool_sizing_is_omitted_for_sqlite(self):
+        """SQLite's in-memory pool raises TypeError on max_overflow."""
+        options = build_settings(sqlalchemy_database_uri="sqlite:///data.db").engine_options
+        assert "pool_size" not in options
+        assert "max_overflow" not in options
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "sqlite:///local.db",
+            "sqlite://",
+            "postgresql+psycopg2://u:p@host/db",
+        ],
+    )
+    def test_engine_options_are_accepted_by_create_engine(self, uri, tmp_path):
+        """The options must actually construct an engine for every dialect we use."""
+        from sqlalchemy import create_engine
+
+        if uri.startswith("sqlite:///"):
+            uri = f"sqlite:///{tmp_path / 'local.db'}"
+        settings = build_settings(database_url=uri)
+        engine = create_engine(uri, **settings.engine_options)
+        engine.dispose()
+
+
+class TestAppAppliesEngineOptions:
+    """The settings are worthless unless create_app actually passes them through."""
+
+    def test_app_config_carries_engine_options(self):
+        from App.app import app
+
+        options = app.config.get("SQLALCHEMY_ENGINE_OPTIONS")
+        assert options, "SQLALCHEMY_ENGINE_OPTIONS was never set"
+        assert options.get("pool_pre_ping") is True
 
 
 class TestEnvExampleDocumentsTheRequirement:

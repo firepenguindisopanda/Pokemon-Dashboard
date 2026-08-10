@@ -113,6 +113,7 @@
           </div>
           <hr>
           <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="input-group">
               <input type="text" name="nickname" class="form-control" placeholder="Nickname" required>
               <button type="submit" class="btn btn-danger"><i class="fas fa-plus-circle me-1"></i>Capture</button>
@@ -159,8 +160,8 @@
                     <button type="submit" form="rename-{{ up.id }}" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>
                     <button type="submit" form="release-{{ up.id }}" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>
                   </div>
-                  <form id="rename-{{ up.id }}" action="/rename-pokemon/{{ up.id }}" method="POST" class="d-none"></form>
-                  <form id="release-{{ up.id }}" action="/release-pokemon/{{ up.id }}" method="POST" class="d-none"></form>
+                  <form id="rename-{{ up.id }}" action="/rename-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
+                  <form id="release-{{ up.id }}" action="/release-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
                 </td>
               </tr>
               {% endfor %}
@@ -403,8 +404,10 @@ function addPokemonToCollection(data) {
         '<button type="submit" form="rename-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>' +
         '<button type="submit" form="release-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>' +
       '</div>' +
-      '<form id="rename-' + data.user_pokemon_id + '" action="/rename-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none"></form>' +
-      '<form id="release-' + data.user_pokemon_id + '" action="/release-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none"></form>' +
+      '<form id="rename-' + data.user_pokemon_id + '" action="/rename-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none">' +
+      '<input type="hidden" name="csrf_token" value="' + (csrfToken() || '') + '"></form>' +
+      '<form id="release-' + data.user_pokemon_id + '" action="/release-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none">' +
+      '<input type="hidden" name="csrf_token" value="' + (csrfToken() || '') + '"></form>' +
     '</td>';
   tbody.appendChild(row);
 }

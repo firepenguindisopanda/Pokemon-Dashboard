@@ -62,10 +62,9 @@ def test_signup_and_login_flow(client):
     assert rv3.status_code == 200
     assert b'pokemon-area' in rv3.data
 
-def test_capture_release_via_client(client):
+def test_capture_release_via_client(auth_client):
     """Full end-to-end through capture and release form submissions."""
-    # log in as bob (prepopulated)
-    login(client, 'bob', 'bobpass')
+    client = auth_client
 
     # capture pokemon id=2 with nickname
     rv = client.post(

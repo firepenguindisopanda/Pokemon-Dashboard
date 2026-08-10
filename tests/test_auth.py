@@ -13,9 +13,9 @@ from tests.helpers import auth_cookies, login
 class TestRefreshToken:
     """Tests for the refresh token endpoint."""
 
-    def test_successful_refresh_returns_new_access_token(self, client):
+    def test_successful_refresh_returns_new_access_token(self, auth_client):
         """Login, then use refresh token to get a new access token."""
-        login(client, 'bob', 'bobpass')
+        client = auth_client
 
         # Check refresh token cookie exists
         assert 'refresh_token' in auth_cookies(client)
@@ -40,7 +40,10 @@ class TestRefreshToken:
     def test_refresh_with_expired_token_returns_401(self, client):
         """Test with an intentionally invalid refresh token."""
         client.set_cookie('refresh_token', 'expired-fake-token')
-        rv = client.post('/api/auth/refresh')
+        client.set_cookie('csrf_refresh_token', 'any-csrf-value')
+        rv = client.post(
+            '/api/auth/refresh', headers={'X-CSRF-TOKEN': 'any-csrf-value'}
+        )
         assert rv.status_code == 401
         data = rv.get_json()
         assert data['code'] == 'INVALID_TOKEN'

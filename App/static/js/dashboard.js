@@ -90,6 +90,37 @@ async function waitForAnalytics() {
 let isRefreshing = false;
 let refreshSubscribers = [];
 
+// ── CSRF ──
+// Auth rides in cookies, so the browser attaches it to cross-site requests as
+// well. flask-jwt-extended sets a readable csrf_access_token cookie; echoing
+// it back in a header proves the request came from our own page, which a
+// cross-origin attacker cannot do.
+const CSRF_SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
+function csrfToken() { return getCookie('csrf_access_token'); }
+function csrfRefreshToken() { return getCookie('csrf_refresh_token'); }
+
+/** Attach the CSRF header to any state-changing request. */
+function withCsrf(options) {
+    const method = (options.method || 'GET').toUpperCase();
+    if (CSRF_SAFE_METHODS.indexOf(method) !== -1) return options;
+
+    const token = csrfToken();
+    if (!token) return options;
+
+    options.headers = Object.assign({}, options.headers);
+    options.headers['X-CSRF-TOKEN'] = token;
+    return options;
+}
+
+window.getCookie = getCookie;
+window.csrfToken = csrfToken;
+
 function onRefreshed() {
     refreshSubscribers.forEach(function(callback) { callback(); });
     refreshSubscribers = [];
@@ -109,7 +140,7 @@ async function apiFetch(url, options) {
     if (!options) options = {};
 
     // Clone options to avoid mutation from retry
-    options = Object.assign({}, options);
+    options = withCsrf(Object.assign({}, options));
 
     let response = await fetch(url, options);
 
@@ -131,9 +162,16 @@ async function apiFetch(url, options) {
     isRefreshing = true;
 
     try {
+        // The refresh endpoint validates against its own CSRF token, not the
+        // access one — they are separate cookies.
+        const refreshHeaders = {};
+        const refreshCsrf = csrfRefreshToken();
+        if (refreshCsrf) refreshHeaders['X-CSRF-TOKEN'] = refreshCsrf;
+
         const refreshResponse = await fetch('/api/auth/refresh', {
             method: 'POST',
             credentials: 'same-origin',
+            headers: refreshHeaders,
         });
 
         if (!refreshResponse.ok) {

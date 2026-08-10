@@ -345,7 +345,7 @@
                 .filter(function(t) { return t && t.trim() !== ''; });
             if (preferredTypes.length > 0) preferences.preferred_types = preferredTypes;
             preferences.team_role_balance = true;
-            const response = await fetch('/api/pokemon-analytics/team-recommend', {
+            const response = await apiFetch('/api/pokemon-analytics/team-recommend', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(preferences)
@@ -461,7 +461,7 @@
         const teamNames = team.map(function(p) { return p.name; });
         try {
             await waitForAnalytics();
-            const res = await fetch('/api/pokemon-analytics/type-coverage', {
+            const res = await apiFetch('/api/pokemon-analytics/type-coverage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ team: teamNames })
@@ -545,7 +545,7 @@
         const container = document.getElementById('optimal-build-container');
         container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Calculating...</div>';
         try {
-            const response = await fetch('/api/pokemon-analytics/optimize');
+            const response = await apiFetch('/api/pokemon-analytics/optimize');
             if (!response.ok) throw new Error('Failed to load optimal build');
             const data = await response.json();
             container.innerHTML =
@@ -568,7 +568,7 @@
         const container = document.getElementById('model-performance-container');
         container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
         try {
-            const response = await fetch('/api/pokemon-analytics/model-performance');
+            const response = await apiFetch('/api/pokemon-analytics/model-performance');
             if (!response.ok) throw new Error('Failed to load model performance');
             const data = await response.json();
             function formatParams(params) {
@@ -610,7 +610,7 @@
         var container = document.getElementById('clustering-container');
         container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Running ' + method.toUpperCase() + ' clustering...</div>';
         try {
-            var response = await fetch('/api/pokemon-analytics/clustering?clusters=5&viz=' + method);
+            var response = await apiFetch('/api/pokemon-analytics/clustering?clusters=5&viz=' + method);
             if (!response.ok) throw new Error('Failed to load clustering');
             var data = await response.json();
             if (data.visualization && data.visualization.length > 0) {
@@ -751,7 +751,7 @@
                 generation: 5, height_m: 1.5, weight_kg: 50,
                 capture_rate: 45, num_abilities: 2, base_total: 510
             };
-            const predRes = await fetch('/api/pokemon-analytics/predict', {
+            const predRes = await apiFetch('/api/pokemon-analytics/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -763,7 +763,7 @@
                 document.getElementById('legendary-chance').textContent = (legProb * 100).toFixed(1) + '%';
                 document.getElementById('is-legendary-pred').textContent = predData.legendary_prediction.is_legendary ? 'Legendary' : 'Normal';
             }
-            const reverseRes = await fetch('/api/pokemon-analytics/reverse-search', {
+            const reverseRes = await apiFetch('/api/pokemon-analytics/reverse-search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hp: stats.hp, attack: stats.attack, defense: stats.defense, sp_attack: stats.sp_attack, sp_defense: stats.sp_defense, speed: stats.speed, type1: type1, type2: type2 || null, n_results: 5 })

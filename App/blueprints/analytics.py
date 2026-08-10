@@ -14,6 +14,24 @@ logger = logging.getLogger(__name__)
 analytics_bp = Blueprint("analytics", __name__, template_folder="../templates")
 
 
+def internal_error(context, status=500):
+    """Log the active exception and return a message safe to show a client.
+
+    Raw exception text has leaked SQL fragments, file paths and stack context
+    to whoever triggered the error. The detail belongs in the log.
+
+    Args:
+        context: Short description of what failed, used in the log and as the
+            client-facing message.
+        status: HTTP status to return.
+
+    Returns:
+        A (response, status) tuple.
+    """
+    logger.exception(context)
+    return jsonify({"error": context}), status
+
+
 # ── Global analytics instance (async background training) ──
 
 pokemon_analytics = None
@@ -70,11 +88,14 @@ def initialize_pokemon_analytics():
         analytics_error = None
         logger.info("Analytics initialized successfully")
         return True
-    except Exception as e:
-        analytics_error = str(e)
-        # Warning level because this can happen on first startup before DB is initialized
-        # (e.g., "no such table: pokemon"). ensure_analytics() will retry when needed.
-        logger.warning("Analytics initialization deferred (DB not ready): %s", e)
+    except Exception as exc:
+        # This value is surfaced to clients via /api/pokemon-analytics/status,
+        # so it must stay generic — the underlying error has included raw SQL
+        # such as "no such table: pokemon". Detail goes to the log only.
+        analytics_error = "Analytics are currently unavailable."
+        # Warning level because this can happen on first startup before the DB
+        # is initialized. ensure_analytics() will retry when needed.
+        logger.warning("Analytics initialization deferred: %s", exc)
         return False
 
 
@@ -105,9 +126,7 @@ def with_analytics(f):
     def wrapper(*args, **kwargs):
         if not ensure_analytics():
             if analytics_error:
-                return jsonify(
-                    {"error": f"Analytics initialization failed: {analytics_error}"}
-                ), 500
+                return jsonify({"error": analytics_error}), 500
             return jsonify(
                 {"error": "Analytics still initializing, try again in a moment"}
             ), 503
@@ -143,8 +162,8 @@ def get_pokemon_descriptive_stats():
     try:
         stats = pokemon_analytics.get_descriptive_stats()
         return jsonify(stats)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/diagnostics", methods=["GET"])
@@ -155,8 +174,8 @@ def get_pokemon_diagnostics():
     try:
         diagnostics = pokemon_analytics.diagnostic_analysis()
         return jsonify(diagnostics)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/clustering", methods=["GET"])
@@ -174,8 +193,8 @@ def get_pokemon_clustering():
         else:
             clustering_results = pokemon_analytics.perform_clustering(n_clusters)
         return jsonify(clustering_results)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/similar", methods=["POST"])
@@ -202,8 +221,8 @@ def find_similar_pokemon():
         )
     except PokemonAnalyticsError as e:
         return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"Similarity search failed: {str(e)}"}), 500
+    except Exception:
+        return internal_error("Similarity search failed.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/reverse-search", methods=["POST"])
@@ -241,8 +260,8 @@ def find_closest_pokemon():
         )
     except PokemonAnalyticsError as e:
         return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"Reverse search failed: {str(e)}"}), 500
+    except Exception:
+        return internal_error("Reverse search failed.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/predict", methods=["POST"])
@@ -284,8 +303,8 @@ def predict_pokemon_performance():
 
         predictions = pokemon_analytics.predict_pokemon_stats(pokemon_data)
         return jsonify(predictions)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/optimize", methods=["GET"])
@@ -296,8 +315,8 @@ def optimize_pokemon_build():
     try:
         optimal_build = pokemon_analytics.optimize_pokemon_build()
         return jsonify(optimal_build)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/team-recommend", methods=["POST"])
@@ -311,11 +330,10 @@ def recommend_pokemon_team():
             return jsonify({"error": "Invalid preferences format"}), 400
         team = pokemon_analytics.recommend_team(preferences)
         return jsonify(team)
-    except ValueError as e:
-        return jsonify({"error": f"Validation error: {str(e)}"}), 400
-    except Exception as e:
-        logger.error(f"Error in team recommendation: {str(e)}")
-        return jsonify({"error": f"Failed to generate team recommendation: {str(e)}"}), 500
+    except ValueError:
+        return jsonify({"error": "Invalid team preferences."}), 400
+    except Exception:
+        return internal_error("Failed to generate a team recommendation.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/model-performance", methods=["GET"])
@@ -327,8 +345,8 @@ def get_model_performance():
         force_retrain = request.args.get("retrain", "false").lower() == "true"
         performance = pokemon_analytics.train_predictive_models(force_retrain=force_retrain)
         return jsonify(performance)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/model-comparison", methods=["GET"])
@@ -345,8 +363,8 @@ def get_model_comparison():
                 "cached": performance.get("cached", False),
             }
         )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return internal_error("Request failed. Please try again.")
 
 
 @analytics_bp.route("/api/pokemon-analytics/type-coverage", methods=["POST"])
@@ -362,8 +380,8 @@ def get_type_coverage():
         return jsonify(result)
     except PokemonAnalyticsError as e:
         return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"Type coverage failed: {str(e)}"}), 500
+    except Exception:
+        return internal_error("Type coverage calculation failed.")
 
 
 # ── Dashboard Page Routes ──

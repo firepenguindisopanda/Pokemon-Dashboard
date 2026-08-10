@@ -9,12 +9,48 @@ guarantees a throwaway SQLite file — the suite never touches a real database.
 import os
 import tempfile
 
-import pytest
-from sqlalchemy import create_engine
+# Isolate the suite from the developer's shell BEFORE importing the app.
+# `Settings` reads these from the environment, so a shell that happens to have
+# DATABASE_URL or REDIS_URL exported would otherwise point tests at live
+# infrastructure and change what several of them assert.
+for _leaky_var in (
+    "DATABASE_URL",
+    "SQLALCHEMY_DATABASE_URI",
+    "REDIS_URL",
+    "DEBUG",
+    "FLASK_SECRET_KEY",
+    "JWT_SECRET_KEY",
+    "RATE_LIMIT_AUTH",
+    "RATE_LIMIT_ENABLED",
+):
+    os.environ.pop(_leaky_var, None)
 
-from App.app import app as flask_app, db
-from App.blueprints.auth import initialize_db
-from tests.helpers import login
+import fakeredis  # noqa: E402
+import pytest  # noqa: E402
+from flask.testing import FlaskClient  # noqa: E402
+from flask_session import Session  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+
+from App.app import app as flask_app, db  # noqa: E402
+from App.blueprints.auth import initialize_db  # noqa: E402
+from App.extensions import limiter  # noqa: E402
+from tests.helpers import login  # noqa: E402
+
+# Rate limits are keyed by client IP, and every test shares 127.0.0.1. Left on,
+# the counters would accumulate across the suite and unrelated tests would start
+# getting 429s depending on run order. The rate-limit tests enable it
+# explicitly for themselves.
+limiter.enabled = False
+
+# Exercise the real server-side session code path without touching Upstash.
+# The app singleton is built at import time with no REDIS_URL, so it would
+# otherwise fall back to cookie sessions and the leak tests would be testing
+# the wrong thing.
+flask_app.config["SESSION_TYPE"] = "redis"
+flask_app.config["SESSION_REDIS"] = fakeredis.FakeRedis()
+flask_app.config["SESSION_KEY_PREFIX"] = "test-session:"
+flask_app.config["SESSION_PERMANENT"] = False
+Session(flask_app)
 
 
 @pytest.fixture
@@ -67,11 +103,51 @@ def client(sqlite_db):
     return flask_app.test_client()
 
 
-@pytest.fixture
-def auth_client(client):
-    """Test client already logged in as the seeded user 'bob'.
+class CsrfAwareClient(FlaskClient):
+    """Test client that sends CSRF tokens the way the real frontend does.
 
-    Saves every authenticated test from repeating the login dance.
+    `dashboard.js` attaches `X-CSRF-TOKEN` to every state-changing request, so
+    gameplay tests should too — otherwise they exercise a browser that does not
+    exist. Tests that target CSRF itself use the plain `client` fixture.
     """
-    login(client, "bob", "bobpass")
-    return client
+
+    SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+    def open(self, *args, **kwargs):
+        method = str(kwargs.get("method", "GET")).upper()
+        if method not in self.SAFE_METHODS:
+            path = str(args[0]) if args else str(kwargs.get("path", ""))
+            # The refresh endpoint validates its own token, not the access one.
+            name = (
+                "csrf_refresh_token"
+                if "/api/auth/refresh" in path
+                else "csrf_access_token"
+            )
+            cookie = self.get_cookie(name)
+            if cookie is not None:
+                headers = dict(kwargs.get("headers") or {})
+                headers.setdefault("X-CSRF-TOKEN", cookie.value)
+                kwargs["headers"] = headers
+        return super().open(*args, **kwargs)
+
+
+@pytest.fixture
+def auth_client(sqlite_db):
+    """Browser-like client, logged in as the seeded user 'bob'.
+
+    Saves every authenticated test from repeating the login dance, and carries
+    CSRF tokens so it behaves like a real page.
+    """
+    with flask_app.app_context():
+        db.create_all()
+        initialize_db()
+
+    original = flask_app.test_client_class
+    flask_app.test_client_class = CsrfAwareClient
+    try:
+        browser = flask_app.test_client()
+    finally:
+        flask_app.test_client_class = original
+
+    login(browser, "bob", "bobpass")
+    return browser

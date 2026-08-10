@@ -147,7 +147,7 @@
         }
         try {
             document.getElementById('overview-loading').style.display = 'flex';
-            const response = await fetch('/api/pokemon-analytics/stats');
+            const response = await apiFetch('/api/pokemon-analytics/stats');
             if (!response.ok) throw new Error('Failed to load stats');
             const data = await response.json();
             document.getElementById('overview-loading').style.display = 'none';

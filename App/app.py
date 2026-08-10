@@ -8,9 +8,11 @@ import datetime
 import logging
 import concurrent.futures
 from collections import namedtuple
-from flask import Flask, current_app, g, redirect, request, flash
+from flask import Flask, current_app, flash, g, redirect, render_template, request
+import redis
 from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_session import Session
 from flask_jwt_extended import (
     JWTManager, current_user,
     create_access_token,
@@ -22,6 +24,7 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError, SQLAlchemyError, TimeoutError
 from App.models import db, User
 from App.auth_helpers import coerce_user_id
+from App.extensions import limiter
 from App.config import get_settings
 from App.blueprints.auth import auth_bp
 from App.blueprints.pokemon import pokemon_bp
@@ -94,7 +97,8 @@ def create_app():
 
     # ── Flask Config ──
     app.config["SECRET_KEY"] = settings.flask_secret_key
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.sqlalchemy_database_uri
+    app.config["SQLALCHEMY_DATABASE_URI"] = settings.database_uri
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = settings.engine_options
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = settings.sqlalchemy_track_modifications
     app.config["DEBUG"] = settings.debug
 
@@ -109,11 +113,65 @@ def create_app():
     app.config["JWT_REFRESH_COOKIE_NAME"] = settings.jwt_refresh_cookie_name
     app.config["JWT_COOKIE_SECURE"] = settings.jwt_cookie_secure
     app.config["JWT_COOKIE_CSRF_PROTECT"] = settings.jwt_cookie_csrf_protect
+    app.config["JWT_CSRF_CHECK_FORM"] = settings.jwt_csrf_check_form
+
+    # ── Session storage ──
+    # Flask's default session is a signed cookie: tamper-proof, but fully
+    # readable by the client. Game state lives in the session (quiz answers,
+    # arena HP), so it must be stored server-side rather than handed to the
+    # player. `Settings` refuses to start in production without REDIS_URL.
+    if settings.redis_url:
+        app.config["SESSION_TYPE"] = "redis"
+        app.config["SESSION_REDIS"] = redis.from_url(settings.redis_url)
+        app.config["SESSION_KEY_PREFIX"] = settings.session_key_prefix
+        app.config["SESSION_PERMANENT"] = False
+        Session(app)
+        logger.info("Sessions stored server-side in Redis.")
+    else:
+        logger.warning(
+            "REDIS_URL is not set — falling back to client-readable cookie "
+            "sessions. Development only; quiz answers are exposed to the client."
+        )
 
     # ── Initialize Extensions ──
     db.init_app(app)
     Migrate(app, db)
-    CORS(app, origins=settings.cors_origins)
+    # supports_credentials is what lets cookies ride on cross-origin requests,
+    # and the spec forbids pairing it with a wildcard origin — so only enable
+    # it once the origins are explicit.
+    cors_origins = settings.cors_origin_list
+    CORS(
+        app,
+        origins=cors_origins,
+        supports_credentials="*" not in cors_origins,
+    )
+
+    app.config["RATELIMIT_STORAGE_URI"] = settings.rate_limit_storage_uri
+    app.config["RATELIMIT_ENABLED"] = settings.rate_limit_enabled
+    app.config["RATELIMIT_KEY_PREFIX"] = settings.rate_limit_key_prefix
+    limiter.init_app(app)
+
+    @app.errorhandler(429)
+    def rate_limit_exceeded(error):
+        """Answer throttled requests in the caller's own format.
+
+        A browser posting the login form should land back on a page, not stare
+        at a JSON blob.
+        """
+        message = "Too many attempts. Please wait a moment and try again."
+        wants_json = (
+            request.path.startswith("/api/")
+            or request.accept_mimetypes.best == "application/json"
+        )
+        if wants_json:
+            return {
+                "status": "error",
+                "code": "RATE_LIMITED",
+                "message": message,
+            }, 429
+
+        flash(message)
+        return render_template("login.html"), 429
 
     # ── Schema readiness check ──
     # Schema creation belongs to `flask db upgrade`, not to app startup.
@@ -210,10 +268,28 @@ def create_app():
 
     @app.context_processor
     def inject_context():
+        """Expose the current user, the clock, and the CSRF token to templates.
+
+        The CSRF token comes from the non-HttpOnly cookie flask-jwt-extended
+        sets alongside the access token; server-rendered forms submit it back
+        as a hidden field.
+        """
+        csrf_token = request.cookies.get(
+            app.config.get("JWT_ACCESS_CSRF_COOKIE_NAME", "csrf_access_token"), ""
+        )
+        # Resolve the proxy eagerly. Left lazy, it raises inside the template
+        # whenever there is no verified JWT — which is exactly the situation in
+        # an error handler, turning a 429 page into a 500.
         try:
-            return dict(current_user=current_user, now=datetime.datetime.now)
+            user = current_user._get_current_object()
         except Exception:
-            return dict(current_user=None, now=datetime.datetime.now)
+            user = None
+
+        return dict(
+            current_user=user,
+            now=datetime.datetime.now,
+            csrf_token=csrf_token,
+        )
 
     # ── Register Blueprints ──
     app.register_blueprint(auth_bp)

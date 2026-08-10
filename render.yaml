@@ -1,0 +1,108 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploy configuration lives here so it is reviewable and reproducible instead
+# of existing only as dashboard state.
+#
+# IMPORTANT: adding this file does NOT retroactively reconfigure a service that
+# was created through the dashboard. Either adopt it as a Blueprint, or mirror
+# the settings below by hand. The build command is the part that must not be
+# missed — see the note on it.
+
+services:
+  - type: web
+    name: pokemon-dashboard
+    runtime: python
+    plan: free
+    branch: pokedex-app
+
+    # !! DO NOT DEPLOY THIS UNTIL T15 HAS LANDED !!
+    # `App/app.py` starts a non-daemon ML training thread at import time. Any
+    # `flask` command against a seeded database therefore completes its work
+    # and then never exits — measured: `flask db upgrade` finishes the
+    # migration in seconds but the process was still alive after 300s. Used
+    # as-is, this build step hangs until Render's build timeout.
+    # T15 moves training off the import path and fixes it.
+    #
+    # `flask db upgrade` MUST run before the app serves traffic. Application
+    # startup no longer creates tables (that was an unguarded race across
+    # workers), so without this step a deploy comes up against an empty schema
+    # and every database-backed request fails.
+    #
+    # It lives in buildCommand because Render's preDeployCommand requires a
+    # paid instance type. On a paid plan, move it to preDeployCommand — that
+    # runs per release rather than per build, which is the correct place for a
+    # migration.
+    buildCommand: "pip install -r requirements.txt && flask db upgrade"
+
+    # Default sync worker, one process. Workstream B (chat) must change this to
+    # `gunicorn --worker-class eventlet wsgi:app` — the sync worker cannot hold
+    # WebSocket connections.
+    startCommand: "gunicorn wsgi:app"
+
+    # `/` is the login page and requires no authentication.
+    healthCheckPath: /
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.13"
+
+      # ── Secrets — set in the dashboard, never committed ──
+      # sync: false means "Render prompts for this; it is not stored in git".
+      # With DEBUG=false the app refuses to start unless both secrets are at
+      # least 32 characters and are not placeholders. That check also runs
+      # during the build, so a weak secret fails the deploy rather than
+      # shipping an unprotected app.
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # Native rediss:// URL, NOT the Upstash REST URL/token.
+      # Required with DEBUG=false; sessions must not fall back to cookies.
+      - key: REDIS_URL
+        sync: false
+
+      # ── Core ──
+      - key: DEBUG
+        value: "false"
+
+      # ── JWT ──
+      - key: JWT_COOKIE_SECURE
+        value: "true"
+      - key: JWT_COOKIE_CSRF_PROTECT
+        value: "true"
+      - key: JWT_ACCESS_TOKEN_EXPIRES_HOURS
+        value: "0.25"
+      - key: JWT_REFRESH_TOKEN_EXPIRES_DAYS
+        value: "7"
+      - key: JWT_TOKEN_LEEWAY_SECONDS
+        value: "30"
+
+      # ── Rate limiting ──
+      # Counters live in Redis so limits survive restarts and span workers.
+      - key: RATE_LIMIT_AUTH
+        value: "20 per minute"
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+
+      # ── CORS ──
+      # Must NOT be "*": auth rides in cookies, and the app refuses to start
+      # with a wildcard when DEBUG=false. Set this to the service's own URL.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # ── Database pooling ──
+      # pool_pre_ping is what survives Neon closing idle connections.
+      - key: DATABASE_POOL_SIZE
+        value: "5"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "10"
+      - key: DATABASE_POOL_PRE_PING
+        value: "true"
+
+      # ── Analytics / ML ──
+      - key: ANALYTICS_AUTO_INITIALIZE
+        value: "true"
+      - key: RANDOM_SEED
+        value: "42"

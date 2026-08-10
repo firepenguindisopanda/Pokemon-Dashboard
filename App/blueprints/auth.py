@@ -15,6 +15,8 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     unset_refresh_cookies,
 )
+from App.config import get_settings
+from App.extensions import limiter
 from App.models import db, User, Pokemon, UserPokemon, Message
 
 logger = logging.getLogger(__name__)
@@ -178,29 +180,43 @@ def signup_page():
 
 
 @auth_bp.route("/signup", methods=["POST"])
+@limiter.limit(lambda: get_settings().rate_limit_auth)
 def signup_action():
     """Create a new user account and log them in with both tokens."""
-    response = None
-    try:
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        user = User(username=username, email=email, password=password)
-        db.session.add(user)
-        db.session.commit()
-        response = redirect(url_for("pokemon.home_page"))
-        access_token = create_access_token(identity=user)
-        refresh_token = create_refresh_token(identity=user)
-        set_access_cookies(response, access_token)
-        set_refresh_cookies(response, refresh_token)
-    except IntegrityError:
+    username = request.form["username"]
+    email = request.form["email"]
+    password = request.form["password"]
+
+    # Check first so the user gets a message naming the actual conflict.
+    if User.query.filter_by(username=username).first():
         flash("Username already exists")
-        response = redirect(url_for("auth.signup_page"))
+        return redirect(url_for("auth.signup_page"))
+    if User.query.filter_by(email=email).first():
+        flash("Email already registered")
+        return redirect(url_for("auth.signup_page"))
+
+    user = User(username=username, email=email, password=password)
+    db.session.add(user)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Backstop for the race between the checks above and this commit.
+        # Without the rollback the session stays poisoned and every later
+        # write in this request fails too.
+        db.session.rollback()
+        logger.info("Signup conflict for username=%r email=%r", username, email)
+        flash("Username already exists")
+        return redirect(url_for("auth.signup_page"))
+
+    response = redirect(url_for("pokemon.home_page"))
+    set_access_cookies(response, create_access_token(identity=user))
+    set_refresh_cookies(response, create_refresh_token(identity=user))
     flash("Account created")
     return response
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit(lambda: get_settings().rate_limit_auth)
 def login_action():
     """Authenticate user, issue access + refresh tokens, redirect to main app."""
     data = request.form
@@ -235,6 +251,7 @@ def logout_action():
 
 
 @auth_bp.route("/api/auth/refresh", methods=["POST"])
+@limiter.limit(lambda: get_settings().rate_limit_auth)
 @jwt_required(refresh=True)
 def refresh_token():
     """Issue a new access token using the refresh token cookie.
