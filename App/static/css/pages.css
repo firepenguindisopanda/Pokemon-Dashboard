@@ -1,0 +1,321 @@
+/* ══════════════════════════════════════════════════════════════════
+   Page styles — moved out of per-template `{% block styles %}` in T21.
+
+   WHY THIS FILE IS SEPARATE FROM components.css
+   components.css is the CSS half of _macros.html: rules for components
+   that are meant to be reused. Everything here is the opposite — it
+   belongs to exactly one page and must never reach another.
+
+   THE RULE, AND IT IS LOAD-BEARING
+   Every selector below starts with a page-root class. An inline <style>
+   block was implicitly scoped to its own page; this file is loaded on
+   all nine, so scoping has to be written down or it is lost.
+
+   T20 learned this the expensive way: moving `.stat-label` out of
+   pokemon_area_details.html silently restyled /pokemon-stats, because
+   styles.css defines that class too and the later sheet wins. T21 had
+   three more of the same waiting:
+
+     .chart-container  styles.css:451 sizes the dashboard's four chart
+                       boxes (height 260px). The piechart page's copy
+                       set width:80%; margin:0 auto.
+     .progress-bar     Bootstrap's, used by the dashboard's loading bar
+                       at height 6px. The piechart page's copy set
+                       height:20px; border-radius:10px.
+     main              on every page via layout.html. Only the two auth
+                       screens want display:flex.
+
+   `TestPageStylesCannotLeak` in tests/test_template_assets.py fails on
+   any selector here that is not scoped to a page root, so the next
+   person cannot reintroduce this by pasting a rule in.
+
+   Values are carried over exactly, hard-coded hex included. Swapping
+   them for the nearest token is a T22 decision, not a refactor.
+   ══════════════════════════════════════════════════════════════════ */
+
+
+/* ── layout opt-in ────────────────────────────────────────────────
+   The one selector that cannot be page-scoped: layout.html's <main> is
+   an *ancestor* of every page root, so no descendant selector reaches
+   it. Pages opt in with {% block main_class %}, which is how the auth
+   screens get a flex parent for their `flex: 1` fill without `main`
+   becoming a flex container on the other seven pages. */
+
+.main-stretch {
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ── /  (login.html) ──────────────────────────────────────────── */
+
+.login-page {
+  flex: 1;
+  background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-page::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  animation: login-glow 8s ease-in-out infinite alternate;
+  z-index: 1;
+}
+
+@keyframes login-glow {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-5%, -5%); }
+}
+
+.login-page .login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.login-page .login-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #C62828, #E53935);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  margin: 0 auto 16px;
+}
+
+/* Identical to the signup copy. Left as two rules rather than one shared
+   `.password-toggle`, because a bare class here would apply to all nine
+   pages — which is the whole point of this file. */
+.login-page .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 5;
+  color: #6c757d;
+  background: none;
+  border: none;
+  /* T23: measured 18x17 at 360px. The icon is small by design, so the
+     target is grown with padding rather than by scaling the glyph. */
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.login-page .password-toggle:hover {
+  color: #C62828;
+}
+
+
+/* ── /signup  (signup.html) ───────────────────────────────────── */
+
+.signup-page {
+  flex: 1;
+  background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.signup-page::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  animation: signup-glow 8s ease-in-out infinite alternate;
+  z-index: 1;
+}
+
+@keyframes signup-glow {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-5%, -5%); }
+}
+
+.signup-page .signup-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.signup-page .signup-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #C62828, #E53935);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  margin: 0 auto 16px;
+}
+
+.signup-page .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 5;
+  color: #6c757d;
+  background: none;
+  border: none;
+  /* T23: measured 18x17 at 360px. The icon is small by design, so the
+     target is grown with padding rather than by scaling the glyph. */
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.signup-page .password-toggle:hover {
+  color: #C62828;
+}
+
+.signup-page .password-requirements li.valid {
+  color: #198754;
+}
+
+
+/* ── /pokemon-area  (pokemon_area.html) ───────────────────────── */
+
+.pokemon-area-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pokemon-area-page .pokemon-area-filters {
+  flex-shrink: 0;
+}
+
+.pokemon-area-page .pokemon-area-cards {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+
+/* ── /pokemon-area/pokemon-details/<id>  (pokemon_area_details.html) ──
+   The header gradient is per-Pokémon, so it cannot be a static rule. The
+   template sets --detail-accent-strong / --detail-accent-soft inline on
+   the element; only the varying part stays in the markup. */
+
+.pokemon-detail-page .detail-header {
+  background: linear-gradient(135deg,
+              var(--detail-accent-strong), var(--detail-accent-soft));
+  position: relative;
+  overflow: hidden;
+}
+
+.pokemon-detail-page .detail-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+}
+
+.pokemon-detail-page .detail-header::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+
+.pokemon-detail-page .type-badge-lg {
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pokemon-detail-page .info-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: transform 0.15s ease;
+}
+
+.pokemon-detail-page .info-card:hover {
+  transform: translateY(-2px);
+}
+
+.pokemon-detail-page .ability-chip {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 16px;
+  background: #f0f0f0;
+  /* T22: the background is hard-coded light in BOTH themes, but the text used
+     to inherit --text-primary, which is #E0E0FF in dark — near-white on
+     near-white, measured at about 1.05:1 and simply invisible. The whole
+     detail panel is .bg-white in both themes, so the text colour has to be
+     pinned here rather than left to the theme. */
+  color: #212529;                 /* 15.3:1 on #f0f0f0 */
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 2px 4px 2px 0;
+}
+
+/* Same trap: these sit on a hard-coded #fafafa card inside the white panel. */
+.pokemon-detail-page .info-card,
+.pokemon-detail-page .info-card .text-muted {
+  color: #5C5C5C;                 /* 6.0:1 on #fafafa */
+}
+
+
+/* ── /pokemon-piechart  (pokemon_piechart.html) ───────────────────
+   Only .chart-container survived the move. The page's other four inline
+   rules — `td`, `.collection .collection-item.active`, `.progress-bar`
+   and `.progress-bar .progress` — styled markup this page does not have,
+   left over from a Materialize-era version of the template. Two of them
+   collide with live selectors elsewhere, so they were deleted rather
+   than carried into a shared sheet. */
+
+.piechart-page .chart-container {
+  width: 80%;
+  margin: 0 auto;
+}

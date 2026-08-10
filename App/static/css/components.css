@@ -62,3 +62,31 @@
   border-radius: 4px;
   transition: width 0.4s ease;
 }
+
+
+/* ── Type colour as text (T22) ─────────────────────────────────────────
+   These live here, not in tokens.css beside the tokens they read, and the
+   reason is load order: tokens.css is first, so `.card-title` in styles.css
+   won at equal specificity and painted 801 card titles #E0E0FF on white in
+   dark mode — 1.29:1. components.css loads after styles.css, so these win.
+
+   Same trap T20 hit from the other direction. The values themselves stay in
+   tokens.css; only the classes moved. */
+.type-text-grass { color: var(--type-grass-text); }
+.type-text-fire { color: var(--type-fire-text); }
+.type-text-water { color: var(--type-water-text); }
+.type-text-bug { color: var(--type-bug-text); }
+.type-text-normal { color: var(--type-normal-text); }
+.type-text-poison { color: var(--type-poison-text); }
+.type-text-electric { color: var(--type-electric-text); }
+.type-text-ground { color: var(--type-ground-text); }
+.type-text-fairy { color: var(--type-fairy-text); }
+.type-text-fighting { color: var(--type-fighting-text); }
+.type-text-psychic { color: var(--type-psychic-text); }
+.type-text-rock { color: var(--type-rock-text); }
+.type-text-ghost { color: var(--type-ghost-text); }
+.type-text-ice { color: var(--type-ice-text); }
+.type-text-dragon { color: var(--type-dragon-text); }
+.type-text-flying { color: var(--type-flying-text); }
+.type-text-steel { color: var(--type-steel-text); }
+.type-text-dark { color: var(--type-dark-text); }

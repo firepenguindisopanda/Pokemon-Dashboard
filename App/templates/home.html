@@ -26,7 +26,8 @@
   <form action="/app" method="GET" class="mb-4">
     <div class="input-group">
       <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-      <input type="text" name="query" class="form-control" placeholder="Search Pokémon..." value="{{ request.args.get('query', '') }}">
+      <input type="text" name="query" class="form-control" placeholder="Search Pokémon..." value="{{ request.args.get('query', '') }}"
+             aria-label="Search Pokémon">
       {% if request.args.get('query') %}
       <a href="/app" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
       {% endif %}
@@ -72,7 +73,9 @@
             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
                  alt="{{ pokemon.name }}" style="width: 150px; height: 150px;">
           </div>
-          <h4 class="fw-bold" style="color: {{ type_colors.get(pokemon.type1.lower(), '#A8A878') }};">
+          {# T22: the raw type colour is 2.06:1 as text on white. The class
+             resolves to the same hue darkened to AA. #}
+          <h4 class="fw-bold type-text-{{ pokemon.type1.lower() }}">
             {{ pokemon.name }}
           </h4>
           <div class="mb-3">
@@ -116,7 +119,8 @@
           <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="input-group">
-              <input type="text" name="nickname" class="form-control" placeholder="Nickname" required>
+              <input type="text" name="nickname" class="form-control" placeholder="Nickname" required
+                     aria-label="Nickname for {{ pokemon.name }}">
               <button type="submit" class="btn btn-danger"><i class="fas fa-plus-circle me-1"></i>Capture</button>
             </div>
           </form>
@@ -138,6 +142,10 @@
         </div>
         <div class="card-body p-0">
           {% if usr_pkmons %}
+          {# T23: without .table-responsive this table never overflowed — it
+             squashed. At 360px Bootstrap shrank the Name column to 61px and the
+             release button to 22px, under the 24px minimum target size. #}
+          <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead>
               <tr>
@@ -156,10 +164,11 @@
                 </td>
                 <td class="align-middle">{{ up.name }}</td>
                 <td class="align-middle">
-                  <div class="d-flex align-items-center gap-1 w-100">
-                    <input type="text" name="new_name_{{ up.id }}" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required>
-                    <button type="submit" form="rename-{{ up.id }}" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>
-                    <button type="submit" form="release-{{ up.id }}" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>
+                  <div class="d-flex align-items-center gap-1 w-100 pokemon-actions">
+                    <input type="text" name="new_name_{{ up.id }}" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required
+                           aria-label="New name for {{ up.name }}">
+                    <button type="submit" form="rename-{{ up.id }}" class="btn btn-sm btn-outline-secondary px-1" title="Rename" aria-label="Rename {{ up.name }}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+                    <button type="submit" form="release-{{ up.id }}" class="btn btn-sm btn-outline-danger px-1" title="Release" aria-label="Release {{ up.name }}"><i class="fas fa-trash" aria-hidden="true"></i></button>
                   </div>
                   <form id="rename-{{ up.id }}" action="/rename-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
                   <form id="release-{{ up.id }}" action="/release-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
@@ -168,6 +177,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
           {% else %}
           <div class="text-center py-4" id="no-pokemon-msg">
             <p class="text-muted mb-0"><i class="fas fa-paw"></i> No Pokémon captured yet.</p>
@@ -389,21 +399,31 @@ function addPokemonToCollection(data) {
   if (emptyMsg) {
     var parent = emptyMsg.parentElement;
     parent.innerHTML =
-      '<table class="table table-hover mb-0"><thead><tr><th>Pokémon</th><th>Name</th><th>Actions</th></tr></thead><tbody id="user-pokemon-tbody"></tbody></table>';
+      '<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Pokémon</th><th>Name</th><th>Actions</th></tr></thead><tbody id="user-pokemon-tbody"></tbody></table></div>';
     tbody = document.getElementById("user-pokemon-tbody");
+  }
+
+  // The nickname is user-supplied, stored, and interpolated into innerHTML
+  // below — in text position and, since T22's aria-labels, in attribute
+  // position too. Attribute context is the dangerous one: an unescaped quote
+  // gets out of the attribute and into an event handler. Escape both.
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   var spriteUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + data.pokemon_id + ".png";
   var row = document.createElement("tr");
   row.id = "user-pokemon-" + data.user_pokemon_id;
   row.innerHTML =
-    '<td class="align-middle"><img src="' + spriteUrl + '" alt="' + data.species + '" width="40" height="40" class="me-2">' + data.species + '</td>' +
-    '<td class="align-middle">' + data.pokemon_name + '</td>' +
+    '<td class="align-middle"><img src="' + spriteUrl + '" alt="' + esc(data.species) + '" width="40" height="40" class="me-2">' + esc(data.species) + '</td>' +
+    '<td class="align-middle">' + esc(data.pokemon_name) + '</td>' +
     '<td class="align-middle">' +
-      '<div class="d-flex align-items-center gap-1 w-100">' +
-        '<input type="text" name="new_name_' + data.user_pokemon_id + '" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required>' +
-        '<button type="submit" form="rename-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-secondary px-1" title="Rename"><i class="fas fa-pen"></i></button>' +
-        '<button type="submit" form="release-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-danger px-1" title="Release"><i class="fas fa-trash"></i></button>' +
+      '<div class="d-flex align-items-center gap-1 w-100 pokemon-actions">' +
+        '<input type="text" name="new_name_' + data.user_pokemon_id + '" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required aria-label="New name for ' + esc(data.pokemon_name) + '">' +
+        '<button type="submit" form="rename-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-secondary px-1" title="Rename" aria-label="Rename ' + esc(data.pokemon_name) + '"><i class="fas fa-pen" aria-hidden="true"></i></button>' +
+        '<button type="submit" form="release-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-danger px-1" title="Release" aria-label="Release ' + esc(data.pokemon_name) + '"><i class="fas fa-trash" aria-hidden="true"></i></button>' +
       '</div>' +
       '<form id="rename-' + data.user_pokemon_id + '" action="/rename-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none">' +
       '<input type="hidden" name="csrf_token" value="' + (csrfToken() || '') + '"></form>' +

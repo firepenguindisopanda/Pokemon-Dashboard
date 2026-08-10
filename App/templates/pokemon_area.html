@@ -12,23 +12,7 @@
 
 {% block title %}Pokémon Area{% endblock %}
 
-{% block styles %}
-.pokemon-area-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.pokemon-area-filters {
-  flex-shrink: 0;
-}
-
-.pokemon-area-cards {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-{% endblock %}
+{# Styles live in static/css/pages.css, scoped under .pokemon-area-page. #}
 
 {% block content %}
 <div class="container-fluid py-3 pokemon-area-page">
@@ -40,7 +24,8 @@
         <form action="/search" method="GET">
           <div class="input-group">
             <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-            <input type="text" name="query" class="form-control" placeholder="Pokémon name, number or type">
+            <input type="text" name="query" class="form-control" placeholder="Pokémon name, number or type"
+               aria-label="Search Pokémon by name, number or type">
             <button type="submit" class="btn btn-danger">Search</button>
           </div>
         </form>

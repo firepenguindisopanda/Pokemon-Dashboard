@@ -13,75 +13,26 @@
 {% set primary_type = pokemon.type1.lower() %}
 {% set accent = type_colors.get(primary_type, "#C62828") %}
 {% set stat_max = 255 %}
+{# T22: the accent is a *fill* colour — correct behind the header gradient
+   and inside a stat bar, unreadable as text. Anything textual uses the
+   `.type-text-*` class, which resolves to the AA-darkened token. #}
+{% set accent_text_class = 'type-text-' ~ primary_type %}
 
 {% block title %}Pokémon Details - {{ pokemon.name }}{% endblock %}
 
-{% block styles %}
-.detail-header {
-  background: linear-gradient(135deg, {{ accent }}dd, {{ accent }}88);
-  position: relative;
-  overflow: hidden;
-}
-.detail-header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-}
-.detail-header::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  left: -10%;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.05);
-}
-/* .stat-row, .stat-label, .stat-value, .stat-bar-track and .stat-bar-fill
-   moved to static/css/components.css alongside the stat_bar macro. */
-.type-badge-lg {
-  padding: 6px 18px;
-  border-radius: 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.info-card {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  transition: transform 0.15s ease;
-}
-.info-card:hover {
-  transform: translateY(-2px);
-}
-.ability-chip {
-  display: inline-block;
-  padding: 4px 14px;
-  border-radius: 16px;
-  background: #f0f0f0;
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin: 2px 4px 2px 0;
-}
-{% endblock %}
+{# Styles live in static/css/pages.css, scoped under .pokemon-detail-page.
+   The stat-bar rules moved to components.css in T20, alongside the macro. #}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 pokemon-detail-page">
   <div class="row justify-content-center">
     <div class="col-12 col-lg-9 col-xl-8">
 
-      <!-- Header -->
-      <div class="detail-header text-white p-4 rounded-top-4">
+      {# The header gradient is derived from the Pokémon's type, so it is the
+         one thing here that cannot be a static rule. Only the two colours stay
+         in the markup; pages.css builds the gradient from them. #}
+      <div class="detail-header text-white p-4 rounded-top-4"
+           style="--detail-accent-strong: {{ accent }}dd; --detail-accent-soft: {{ accent }}88;">
         <a href="/pokemon-area" class="text-white text-decoration-none opacity-75 hover-opacity-100 d-inline-flex align-items-center mb-2" style="font-size:0.9rem;">
           <i class="fas fa-arrow-left me-2"></i>Back to Pokémon Area
         </a>
@@ -119,7 +70,7 @@
       <div class="bg-white rounded-bottom-4 shadow-sm p-4 p-md-5" style="border-top:4px solid {{ accent }};">
 
         <!-- About Section -->
-        {{ section_header('About', icon='fa-info-circle', color=accent) }}
+        {{ section_header('About', icon='fa-info-circle', color_class=accent_text_class) }}
         <div class="row g-3 mb-4">
           <div class="col-6 col-md-4">
             <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
@@ -172,7 +123,7 @@
         </div>
 
         <!-- Abilities -->
-        {{ section_header('Abilities', icon='fa-bolt', color=accent) }}
+        {{ section_header('Abilities', icon='fa-bolt', color_class=accent_text_class) }}
         <div class="mb-4">
           {% if pokemon.abilities is iterable and pokemon.abilities is not string %}
             {% for ability in pokemon.abilities %}
@@ -184,7 +135,7 @@
         </div>
 
         <!-- Base Stats -->
-        {{ section_header('Base Stats', icon='fa-chart-bar', color=accent) }}
+        {{ section_header('Base Stats', icon='fa-chart-bar', color_class=accent_text_class) }}
         {% set stats = [
           ('HP', pokemon.hp),
           ('ATK', pokemon.attack),
@@ -195,12 +146,12 @@
         ] %}
         <div class="mb-2">
           {% for label, value in stats %}
-          {{ stat_bar(label, value, stat_max, accent) }}
+          {{ stat_bar(label, value, stat_max, accent, type_name=primary_type) }}
           {% endfor %}
         </div>
 
         <!-- Total stat row -->
-        {{ stat_bar('TOTAL', pokemon.base_total, stat_max * 6, accent, opacity=0.6, label_width='50px', row_classes='stat-row border-top pt-2 mt-2') }}
+        {{ stat_bar('TOTAL', pokemon.base_total, stat_max * 6, accent, opacity=0.6, label_width='50px', row_classes='stat-row border-top pt-2 mt-2', type_name=primary_type) }}
       </div>
 
     </div>

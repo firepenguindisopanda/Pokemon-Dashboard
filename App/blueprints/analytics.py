@@ -506,53 +506,17 @@ def analytics_status():
     return jsonify(state.as_status())
 
 
-@analytics_bp.route("/pokemon-stats-v1", methods=["GET"])
-@jwt_required()
-def pokemon_stats():
-    """Legacy stats page with bar and pie charts."""
-    pokemon_data = db.session.query(
-        Pokemon.type1,
-        db.func.count(Pokemon.id).label("count"),
-    ).group_by(Pokemon.type1).all()
-
-    chart_data = {
-        "labels": [d.type1 for d in pokemon_data],
-        "values": [d.count for d in pokemon_data],
-        "colors": [TYPE_COLORS.get(d.type1, "#FFFFFF") for d in pokemon_data],
-    }
-
-    total_pokemon = sum(chart_data["values"])
-    pie_chart_data = {
-        "labels": chart_data["labels"],
-        "values": [(count / total_pokemon) * 100 for count in chart_data["values"]],
-    }
-
-    avg_stats = db.session.query(
-        db.func.avg(Pokemon.hp).label("hp"),
-        db.func.avg(Pokemon.attack).label("attack"),
-        db.func.avg(Pokemon.defense).label("defense"),
-        db.func.avg(Pokemon.sp_attack).label("sp_attack"),
-        db.func.avg(Pokemon.sp_defense).label("sp_defense"),
-        db.func.avg(Pokemon.speed).label("speed"),
-    ).first()
-
-    combined_type_data = get_combined_type_distribution()
-    combined_chart_data = {
-        "labels": list(combined_type_data.keys()),
-        "values": list(combined_type_data.values()),
-        "colors": [
-            TYPE_COLORS.get(type_, "#FFFFFF") for type_ in combined_type_data.keys()
-        ],
-    }
-
-    return render_template(
-        "pokemon_dashboard.html",
-        chart_data=chart_data,
-        pie_chart_data=pie_chart_data,
-        combined_chart_data=combined_chart_data,
-        total_pokemon=total_pokemon,
-        avg_stats=avg_stats._asdict(),
-    )
+# `/pokemon-stats-v1` was deleted in T21 (maintainer's ruling). It rendered
+# pokemon_dashboard.html with five variables that template stopped reading when
+# it was rewritten for the async dashboard, and without the `type_colors` it
+# does read — so every request 500'd with "Object of type Undefined is not JSON
+# serializable". Nothing linked to it and `/pokemon-stats` supersedes it.
+#
+# It was the only caller of get_combined_type_distribution() below, which is
+# now unreferenced. The helper is kept for the moment rather than deleted with
+# the route: T18 rewrote it as a UNION ALL and verified it against live Neon,
+# and tests/test_sql_pushdown.py mutation-tested it. Deleting proven, covered
+# code is a separate call for the maintainer to make.
 
 
 @analytics_bp.route("/pokemon-piechart", methods=["GET"])

@@ -15,24 +15,31 @@
   filter: brightness(0) saturate(100%) invert(14%) sepia(47%) saturate(5044%) hue-rotate(347deg) brightness(93%) contrast(96%);
 }
 
-.type-grass { background-color: #78C850; color: #fff; }
-.type-fire { background-color: #F08030; color: #fff; }
-.type-water { background-color: #6890F0; color: #fff; }
-.type-bug { background-color: #A8B820; color: #fff; }
-.type-normal { background-color: #A8A878; color: #fff; }
-.type-poison { background-color: #A040A0; color: #fff; }
-.type-electric { background-color: #F8D030; color: #212529; }
-.type-ground { background-color: #E0C068; color: #212529; }
-.type-fairy { background-color: #EE99AC; color: #fff; }
-.type-fighting { background-color: #C03028; color: #fff; }
-.type-psychic { background-color: #F85888; color: #fff; }
-.type-rock { background-color: #B8A038; color: #fff; }
-.type-ghost { background-color: #705898; color: #fff; }
-.type-ice { background-color: #98D8D8; color: #212529; }
-.type-dragon { background-color: #7038F8; color: #fff; }
-.type-flying { background-color: #A890F0; color: #fff; }
-.type-steel { background-color: #B8B8D0; color: #212529; }
-.type-dark { background-color: #705848; color: #fff; }
+/* Type badges. Background colours are the canonical type identity and are
+   unchanged; only the text colour moved, to clear WCAG AA 4.5:1. The measured
+   ratio is on each line. 13 of these were white-on-light before T22 — four of
+   them (electric, ground, ice, steel) were *authored* dark and silently
+   overridden by a second `.type-badge { color: white }` rule further down this
+   file, which is why the browser found 13 failures where reading the file
+   suggested 9. Do not add `color` to `.type-badge`. */
+.type-grass { background-color: #78C850; color: #212529; }  /* 7.48:1 */
+.type-fire { background-color: #F08030; color: #212529; }  /* 5.76:1 */
+.type-water { background-color: #6890F0; color: #212529; }  /* 5.02:1 */
+.type-bug { background-color: #A8B820; color: #212529; }  /* 7.01:1 */
+.type-normal { background-color: #A8A878; color: #212529; }  /* 6.27:1 */
+.type-poison { background-color: #A040A0; color: #FFFFFF; }  /* 5.62:1 */
+.type-electric { background-color: #F8D030; color: #212529; }  /* 10.33:1 */
+.type-ground { background-color: #E0C068; color: #212529; }  /* 8.75:1 */
+.type-fairy { background-color: #EE99AC; color: #212529; }  /* 7.19:1 */
+.type-fighting { background-color: #C03028; color: #FFFFFF; }  /* 5.68:1 */
+.type-psychic { background-color: #F85888; color: #212529; }  /* 4.95:1 */
+.type-rock { background-color: #B8A038; color: #212529; }  /* 5.97:1 */
+.type-ghost { background-color: #705898; color: #FFFFFF; }  /* 5.94:1 */
+.type-ice { background-color: #98D8D8; color: #212529; }  /* 9.66:1 */
+.type-dragon { background-color: #7038F8; color: #FFFFFF; }  /* 5.82:1 */
+.type-flying { background-color: #A890F0; color: #212529; }  /* 5.81:1 */
+.type-steel { background-color: #B8B8D0; color: #212529; }  /* 7.94:1 */
+.type-dark { background-color: #705848; color: #FFFFFF; }  /* 6.61:1 */
 
 .sprite-glow {
   display: inline-flex;
@@ -139,7 +146,6 @@
   border-radius: 4px;
   font-size: 0.85rem;
   font-weight: 600;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .type-badge-sm {
@@ -345,7 +351,7 @@ body {
     padding: 12px 24px; margin: 0; border-radius: 4px; cursor: pointer;
     transition: all 0.3s ease; font-weight: 500;
 }
-.tab-button:hover, .tab-button.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); transform: translateY(-2px); }
+.tab-button:hover, .tab-button.active { background: var(--accent-color); color: var(--color-on-accent); border-color: var(--accent-color); transform: translateY(-2px); }
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
@@ -396,7 +402,11 @@ body {
     border-radius: 4px; font-size: 1rem; background-color: var(--input-bg);
     color: var(--text-primary); transition: all 0.3s ease;
 }
-.form-control:focus { outline: none; border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+/* T22: `outline: none` used to be here. It outranks the global
+   :focus-visible rule (0,2,0 vs 0,1,0), so keyboard focus on every input
+   in the app was invisible apart from a 15%-alpha glow. The glow stays as
+   the pointer-focus affordance; the outline comes from :focus-visible. */
+.form-control:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 
 .btn {
@@ -421,7 +431,11 @@ body {
 .pokemon-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: var(--text-primary); }
 .pokemon-role { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
 .pokemon-types { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
-.type-badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.8rem; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+/* Sizing only. `color` belongs to the per-type rules above; setting it here
+   overrode all 18 of them at equal specificity. The dark text-shadow went
+   with it — behind near-black text it is mud, and axe flagged it on ~3,874
+   nodes as a second foreground. */
+.type-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
 .pokemon-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .stat-mini { text-align: center; }
 .stat-mini-value { font-weight: bold; color: var(--stat-color); }
@@ -462,8 +476,8 @@ body {
 .theme-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .btn-theme { padding: 8px 16px; background: rgba(102, 126, 234, 0.1); color: var(--accent-color); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; }
 .btn-theme:hover { background: rgba(102, 126, 234, 0.2); border-color: rgba(102, 126, 234, 0.5); }
-.btn-theme.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-.btn-theme.random-theme { background: #ff6b6b; color: white; border-color: #ff6b6b; font-weight: 600; }
+.btn-theme.active { background: var(--accent-color); color: var(--color-on-accent); border-color: var(--accent-color); }
+.btn-theme.random-theme { background: #ff6b6b; color: #212529; border-color: #ff6b6b; font-weight: 600; }  /* T22: white was 2.78:1; dark text on the same coral is 5.56:1 */
 .btn-theme.random-theme:hover { background: #ff5252; transform: translateY(-1px); }
 
 select.form-control { cursor: pointer; }
@@ -515,4 +529,124 @@ select.form-control option:checked { background-color: var(--accent-color); colo
 .closest-pokemon-item .cp-sprite { width: 40px; height: 40px; image-rendering: pixelated; }
 .closest-pokemon-item .cp-name { font-weight: 600; font-size: 0.9rem; }
 .closest-pokemon-item .cp-sim { font-size: 0.75rem; opacity: 0.8; }
-.cp-type-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; color: white; font-size: 0.65rem; font-weight: 600; margin-right: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+/* Sizing only — same rule as .type-badge. `color: white` lived here and,
+   sitting below the per-type rules at equal specificity, overrode all 18. */
+.cp-type-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-right: 2px; }
+
+
+/* ── Contrast on the red brand bar (T22) ───────────────────────────────
+   Bootstrap's navbar-dark paints links at rgba(255,255,255,.55), which is
+   2.60:1 on #C62828 — the single most-repeated contrast failure in the app,
+   since the navbar is on all nine pages. 0.85 alpha still only reaches
+   4.43:1, so these go solid. The active link stays distinguishable by weight
+   and the underline rule above, not by being the only readable one. */
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark .navbar-brand {
+  color: #FFFFFF;                 /* 5.62:1 on #C62828 */
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+  color: var(--pokemon-gold, #F9A825);
+}
+
+/* Footer small print: .text-white-50 is 2.39:1 on the same red. */
+.bg-pokemon .text-white-50 {
+  color: rgba(255, 255, 255, 0.92) !important;   /* 5.0:1 */
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   T23 — the 375px pass.
+
+   Body overflow was already zero on all nine routes before this task:
+   the chart containers are relative, the dashboard grid is
+   `auto-fit/minmax`, and the 18x18 type matrix has its own scroller.
+   Measured with a validated probe (a 600px canary produced 240px of
+   overflow and was reported; the same canary inside an overflow-x:auto
+   parent was correctly ignored), so the zero is real rather than an
+   instrument that sees nothing.
+
+   What was actually broken was the other two criteria — the navbar
+   wrapping, and a table that fitted by squashing its contents.
+
+   Note: 375px of viewport is 360px of content in a desktop browser,
+   because the scrollbar is not an overlay. Everything below was checked
+   at 360px, which is the stricter number.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Touch targets ──
+   At desktop widths these are comfortable; the squashed table is what
+   pushed them under. Measured at 360px before the fix: release 22x40,
+   rename 24x40, .password-toggle 18x17. WCAG 2.2 SC 2.5.8 asks for 24px
+   minimum — above this project's 2.1 AA bar, but a 22px control on a
+   phone is exactly what a 375px pass is for. */
+.pokemon-actions .btn {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The rename field must not be crushed by the two buttons beside it. */
+.pokemon-actions .form-control {
+  min-width: 7rem;
+}
+
+/* Bootstrap's .btn-close renders 21x21. It is the dismiss control on every
+   toast, so it is the one target a user is most likely to stab at on a phone. */
+.toast .btn-close {
+  min-width: 28px;
+  min-height: 28px;
+  background-position: center;
+}
+
+/* Standalone links need a target too. This does NOT apply to links inside a
+   sentence — "Create one here" on the login screen is 106x16 and stays that
+   way, because WCAG 2.5.8 exempts targets whose size is constrained by the
+   line-height of the surrounding text. Growing those would break the prose. */
+.detail-header a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+/* ── Navbar on a narrow bar ──
+   At 360px the brand ran to x=218 and the theme toggle began at x=208 —
+   a 9px overlap, so the flex row wrapped and the navbar became 96px tall
+   on every page. Two changes buy back the space: a smaller brand, and
+   dropping the toggle's text label so it is icon-only.
+
+   575.98px is Bootstrap's `sm` boundary, so this lines up with when the
+   navbar collapses rather than introducing a third breakpoint. */
+@media (max-width: 575.98px) {
+  .navbar-brand {
+    font-size: 1rem;
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .theme-toggle-nav {
+    padding: var(--space-2xs);
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  /* Visually hidden, NOT display:none — the button would otherwise lose
+     the text a screen reader reads alongside its aria-label. This is the
+     standard clip-rect pattern. */
+  #theme-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}

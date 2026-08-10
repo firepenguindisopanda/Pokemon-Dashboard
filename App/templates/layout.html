@@ -30,6 +30,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  {# Page-specific rules, every one scoped to a page-root class. Loads last so
+     a page can override a component; see the header of pages.css. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
   <style>
     {% block styles %}{% endblock %}
   </style>
@@ -56,8 +59,18 @@
           <i class="fas fa-moon" id="theme-icon" aria-hidden="true"></i>
           <span id="theme-label">Dark</span>
         </button>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
+        {# The burger renders as an empty <button> — its icon is a background
+           image on a bare <span>, so it has no accessible name at all. axe
+           reports it as `button-name`, critical, on every page.
+
+           T22's sweep missed it because `.navbar-toggler` is display:none above
+           the lg breakpoint and that sweep only ran at 1280px. It is only ever
+           visible on the viewport T23 exists to cover. aria-controls and
+           aria-expanded are Bootstrap's documented markup and were absent too,
+           so nothing announced whether the menu was open. #}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation menu">
+          <span class="navbar-toggler-icon" aria-hidden="true"></span>
         </button>
       </div>
       <div class="collapse navbar-collapse" id="navbarNav">
@@ -70,7 +83,8 @@
             <a class="nav-link{% if request.endpoint in ('pokemon.pokemon_area', 'pokemon.pokemon_area_details') %} active{% endif %}" href="{{ url_for('pokemon.pokemon_area') }}">Pokémon Area</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link{% if request.endpoint in ('analytics.pokemon_analytics_dashboard', 'analytics.pokemon_stats') %} active{% endif %}" href="{{ url_for('analytics.pokemon_analytics_dashboard') }}">Dashboard</a>
+            {# `analytics.pokemon_stats` was the deleted /pokemon-stats-v1 route. #}
+            <a class="nav-link{% if request.endpoint == 'analytics.pokemon_analytics_dashboard' %} active{% endif %}" href="{{ url_for('analytics.pokemon_analytics_dashboard') }}">Dashboard</a>
           </li>
           <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'analytics.pokemon_ml_playground' %} active{% endif %}" href="{{ url_for('analytics.pokemon_ml_playground') }}">ML Playground</a>
@@ -106,7 +120,12 @@
 
   <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 
-  <main class="flex-grow-1">
+  {# `main` is the one element a page cannot reach with a descendant selector,
+     because it is the ancestor of every page root. The auth screens need it to
+     be a flex container so their `flex: 1` fills the viewport; the other seven
+     pages must not get that. This block is how they opt in — it emits nothing
+     by default, so those seven render byte-identical markup. #}
+  <main class="flex-grow-1{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
 

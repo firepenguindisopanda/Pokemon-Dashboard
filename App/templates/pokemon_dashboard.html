@@ -1,10 +1,7 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import skeleton %}
 
 {% block title %}Pokemon Analytics Dashboard{% endblock %}
-
-{% block styles %}
-/* Dashboard page-specific overrides */
-{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -12,7 +9,8 @@
         <h1><i class="fas fa-chart-line"></i> Pokemon Analytics Dashboard</h1>
         <p>Comprehensive Pokemon statistics and analysis</p>
         <div class="header-controls">
-            <div id="analytics-status-banner" style="display:none;" class="alert alert-info py-2 mb-2 text-center">
+            <div id="analytics-status-banner" style="display:none;" class="alert alert-info py-2 mb-2 text-center"
+                 role="status" aria-live="polite">
                 <i class="fas fa-spinner fa-spin me-2"></i> Preparing analytics engine...
             </div>
             {# The theme toggle now lives in layout.html's nav, on all 9 pages. #}
@@ -21,15 +19,36 @@
 
     <!-- Overview Content -->
     <div id="overview">
-        <div id="overview-loading" class="analytics-loading" style="display:flex;">
-            <div class="loading-spinner">
-                <i class="fas fa-cog fa-spin fa-3x" style="color:var(--accent-color);"></i>
-                <h4 class="mt-3">Initializing Analytics Engine...</h4>
-                <p style="color:var(--text-secondary);">Training ML models and crunching data</p>
-                <div class="progress mt-3" style="height:6px;max-width:300px;margin:0 auto;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         style="width:100%;background:var(--accent-gradient);"></div>
+        {# T20 shipped the `skeleton` macro with no call site: the .skeleton-*
+           rules had been in styles.css styling markup nothing rendered. It
+           could not be adopted then, because doing so changes what this page
+           looks like while loading and T20's contract was that nothing does.
+           This is the swap — four placeholders standing in for the four stat
+           cards below, so the layout does not jump when the data lands.
+           The status text is kept: a spinner said "working", and a bare
+           skeleton says nothing at all. #}
+        {# The grid is a sibling of the centred text, not a child of it.
+           `.analytics-loading` is `display:flex; justify-content:center`, so
+           its one child is sized to content — nesting the grid there collapsed
+           it to a single 308px column and made the page four cards tall. Out
+           here it gets the container's full width and lands on the same four
+           tracks as the real stat cards below, which is the point: the layout
+           does not jump when the data arrives. #}
+        {# role=status + aria-live so the wait, and its end, are announced.
+           The skeleton grid is aria-hidden: it is decoration, and reading out
+           twelve empty placeholders would be worse than silence. #}
+        <div id="overview-loading" style="display:block;" role="status" aria-live="polite">
+            <div class="analytics-loading" style="min-height:auto;">
+                <div class="loading-spinner">
+                    <h4>Initializing Analytics Engine...</h4>
+                    <p style="color:var(--text-secondary);">Training ML models and crunching data</p>
                 </div>
+            </div>
+            <div class="dashboard-grid" aria-hidden="true">
+                {{ skeleton(bars=2) }}
+                {{ skeleton(bars=2) }}
+                {{ skeleton(bars=2) }}
+                {{ skeleton(bars=2) }}
             </div>
         </div>
         <div id="overview-content" style="display:none;">
@@ -128,124 +147,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block scripts %}
 {# dashboard.js is loaded by layout.html for every page. Loading it again here
    threw "Identifier 'TEAM_COLORS' has already been declared", which aborted
    this second copy outright. #}
-<script>
-    const typeColors = {{ type_colors | tojson }};
-
-    // ── Load overview data ──
-    async function loadOverviewData() {
-        if (!analyticsReady) {
-            document.getElementById('overview-loading').style.display = 'flex';
-            const ready = await waitForAnalytics();
-            if (!ready) {
-                showError('Analytics failed to initialize. Reload to try again.');
-                document.getElementById('overview-loading').style.display = 'none';
-                return;
-            }
-        }
-        try {
-            document.getElementById('overview-loading').style.display = 'flex';
-            const response = await apiFetch('/api/pokemon-analytics/stats');
-            if (!response.ok) throw new Error('Failed to load stats');
-            const data = await response.json();
-            document.getElementById('overview-loading').style.display = 'none';
-            document.getElementById('overview-content').style.display = 'block';
-            document.getElementById('total-pokemon').textContent = data.total_pokemon;
-            document.getElementById('legendary-count').textContent = data.legendary_count;
-            document.getElementById('avg-base-total').textContent = Math.round(data.stat_averages.base_total);
-            document.getElementById('generation-count').textContent = Object.keys(data.generation_distribution).length;
-            createTypeChart(data.type_distribution);
-            createGenChart(data.generation_distribution);
-            createRadarChart(data.stat_averages);
-            createLegendaryCompareChart();
-        } catch (error) {
-            showError('Failed to load overview data');
-            document.getElementById('overview-loading').style.display = 'none';
-        }
-    }
-
-    // ── Charts ──
-    function createTypeChart(typeData) {
-        const ctx = document.getElementById('type-chart').getContext('2d');
-        const labels = Object.keys(typeData);
-        const colors = labels.map(function(t) { return typeColors[t] || '#CCCCCC'; });
-        safeCreateChart('type-distribution', ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{ data: Object.values(typeData), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, boxWidth: 10 } } } }
-        });
-    }
-
-    function createGenChart(genData) {
-        const ctx = document.getElementById('gen-chart').getContext('2d');
-        const labels = Object.keys(genData).sort(function(a,b) { return parseInt(a) - parseInt(b); });
-        const values = labels.map(function(l) { return genData[l]; });
-        safeCreateChart('gen-distribution', ctx, {
-            type: 'bar',
-            data: {
-                labels: labels.map(function(l) { return 'Gen ' + l; }),
-                datasets: [{ label: 'Pokemon Count', data: values, backgroundColor: '#667eea', borderRadius: 4 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 50 } }, x: { grid: { display: false } } } }
-        });
-    }
-
-    function createRadarChart(statAverages) {
-        const ctx = document.getElementById('radar-chart').getContext('2d');
-        const labels = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
-        const mapKeys = { 'HP': 'hp', 'Attack': 'attack', 'Defense': 'defense', 'Sp. Atk': 'sp_attack', 'Sp. Def': 'sp_defense', 'Speed': 'speed' };
-        const values = labels.map(function(l) { return statAverages[mapKeys[l]] || 0; });
-
-        safeCreateChart('stats-radar', ctx, {
-            type: 'radar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Average Stats', data: values, backgroundColor: 'rgba(102, 126, 234, 0.2)', borderColor: 'rgba(102, 126, 234, 0.9)', borderWidth: 2, pointBackgroundColor: 'rgba(102, 126, 234, 1)', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 },
-                    { label: 'Max (255)', data: [255, 255, 255, 255, 255, 255], backgroundColor: 'rgba(255, 99, 132, 0.05)', borderColor: 'rgba(255, 99, 132, 0.3)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                scales: { r: { beginAtZero: true, max: 255, ticks: { stepSize: 50 } } },
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } } }
-        });
-    }
-
-    function createLegendaryCompareChart() {
-        const ctx = document.getElementById('legendary-compare-chart').getContext('2d');
-        const labels = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
-        // Fetch filtered stats from API — for now use all-data averages
-        const s = window._statAverages || {};
-        const legendaryAvg = [s.hp ? s.hp * 1.3 : 85, s.attack ? s.attack * 1.3 : 85, s.defense ? s.defense * 1.3 : 85, s.sp_attack ? s.sp_attack * 1.3 : 85, s.sp_defense ? s.sp_defense * 1.3 : 85, s.speed ? s.speed * 1.3 : 85];
-        const nonLegendaryAvg = [s.hp ? s.hp * 0.95 : 70, s.attack ? s.attack * 0.95 : 70, s.defense ? s.defense * 0.95 : 70, s.sp_attack ? s.sp_attack * 0.95 : 70, s.sp_defense ? s.sp_defense * 0.95 : 70, s.speed ? s.speed * 0.95 : 70];
-
-        safeCreateChart('legendary-compare', ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Legendary', data: legendaryAvg, backgroundColor: 'rgba(255, 99, 132, 0.7)', borderRadius: 3 },
-                    { label: 'Non-Legendary', data: nonLegendaryAvg, backgroundColor: 'rgba(102, 126, 234, 0.7)', borderRadius: 3 }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true }, x: { grid: { display: false } } },
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } } }
-        });
-    }
-
-    // ── Filter chip handlers ──
-    document.addEventListener('DOMContentLoaded', function() {
-        // Theme setup lives in layout.html and dashboard.js now.
-
-        // Load overview data on page load
-        loadOverviewData();
-    });
-</script>
+<script id="type-colors-data" type="application/json">{{ type_colors | tojson }}</script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
 {% endblock %}

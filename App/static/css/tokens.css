@@ -33,7 +33,9 @@
   --color-surface-raised: #F8F9FA;
   --color-text: #1A1A2E;
   --color-text-secondary: #555555;
-  --color-text-muted: #888888;
+  /* T22: #888888 is 3.54:1 on white — .form-text and other muted copy sat
+     below AA. #767676 is the darkest grey that still reads as muted. */
+  --color-text-muted: #767676;   /* 4.54:1 on #FFFFFF */
   --color-border: #E0E0E0;
 
   /* ── Colour: feedback ── */
@@ -77,6 +79,10 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
   --shadow-focus: 0 0 0 3px rgba(198, 40, 40, 0.4);
+  /* T22: the ring colour itself, for :focus-visible outlines. Darker than
+     --pokemon-red so it stays visible against the red navbar's neighbours
+     and clears 3:1 against both the page and card surfaces. */
+  --color-focus-ring: #8E1F1F;
 
   /* ── Motion ── */
   --motion-fast: 0.15s ease;
@@ -100,15 +106,19 @@
   --text-muted: var(--color-text-muted);
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-shadow: rgba(0, 0, 0, 0.08);
-  --accent-gradient: #667EEA;
-  --accent-color: #667EEA;
-  --btn-gradient: #667EEA;
+  --accent-gradient: #4361E6;   /* T22: white text on it is 5.13:1 */
+  /* T22: was #667EEA, 3.66:1 on white — failed both as text (.btn-theme,
+     .stat-mini-value) and as a background behind white text. Contrast is
+     symmetric, so one darker value fixes both uses. */
+  --accent-color: #4361E6;      /* 4.56:1 on #EFF1FC, the lightest surface it sits on */
+  --color-on-accent: #FFFFFF;   /* 5.13:1 on --accent-color */
+  --btn-gradient: #4361E6;      /* T22: white text on it is 5.13:1 */
   --btn-shadow: rgba(102, 126, 234, 0.4);
   --card-accent-border: #F0F0F0;
   --input-bg: var(--color-surface);
   --input-border: var(--color-border);
   --input-focus: #667EEA;
-  --stat-color: #667EEA;
+  --stat-color: #4361E6;        /* 4.87:1 on #F8F9FA — see --accent-color */
   --info-bg: var(--color-info-bg);
   --pokemon-card-bg: var(--color-surface-raised);
   --skeleton-bg: #E0E0E0;
@@ -122,7 +132,7 @@
   --color-surface-raised: #26264A;
   --color-text: #E0E0FF;
   --color-text-secondary: #A0A0B8;
-  --color-text-muted: #7A7A90;
+  --color-text-muted: #818196;  /* T22: 4.51:1 on #191930 */
   --color-border: rgba(255, 255, 255, 0.15);
 
   --color-info-bg: rgba(124, 77, 255, 0.15);
@@ -132,6 +142,8 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-focus: 0 0 0 3px rgba(249, 168, 37, 0.5);
+  /* Amber on the near-black surface; red would disappear. */
+  --color-focus-ring: #FFC44D;
 
   /* Legacy alias — the layout's <body> background reads this directly. */
   --pokemon-bg: var(--color-bg);
@@ -142,14 +154,17 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: rgba(0, 0, 0, 0.3);
   --accent-gradient: #7C4DFF;
-  --accent-color: #7C4DFF;
+  --accent-color: #9974FF;      /* T22: 4.54:1 on the lightest dark surface */
+  /* The dark accent is light, so white on it is only 3.34:1 — it needs dark
+     text, which is the opposite of the light theme. Hence the paired token. */
+  --color-on-accent: #14141F;   /* 5.48:1 on --accent-color */
   --btn-gradient: #7C4DFF;
   --btn-shadow: rgba(124, 77, 255, 0.4);
   --card-accent-border: rgba(255, 255, 255, 0.06);
   --input-bg: rgba(30, 30, 60, 0.8);
   --input-border: rgba(255, 255, 255, 0.15);
   --input-focus: #7C4DFF;
-  --stat-color: #7C4DFF;
+  --stat-color: #9974FF;        /* T22: 4.88:1 on #1D1D3A */
   --pokemon-card-bg: rgba(30, 30, 60, 0.8);
   --skeleton-bg: rgba(255, 255, 255, 0.08);
   --skeleton-shine: rgba(255, 255, 255, 0.15);
@@ -188,4 +203,87 @@
   .theme-toggle-nav {
     transition: none;
   }
+}
+
+
+/* ── Type colours used as TEXT (T22) ───────────────────────────────────
+   The raw type colours in App/constants.py are tuned to be read as
+   *fills* — behind a badge, inside a gradient, as a stat bar. Used as
+   text on white they are unreadable: #F8D030 (electric) is 1.49:1 and
+   #78C850 (grass) is 2.06:1, against a WCAG AA floor of 4.5:1. That was
+   982 failing card titles on /pokemon-area alone.
+
+   Each value below is the original colour walked down in lightness,
+   hue and saturation held, until it clears 4.5:1. So it is the same
+   colour, darker — the type coding survives. The fill colours are NOT
+   touched; only text uses these.
+
+   One set, not a light/dark pair: every site that uses a type colour as
+   text sits on a white card in *both* themes, because Bootstrap's .card
+   never received a dark-theme background. Measured in the browser, not
+   assumed. That white-card-in-dark-mode gap is a real defect and is
+   recorded separately — if it is ever fixed, these need dark variants.
+
+   tests/test_accessibility.py recomputes every ratio and fails below AA.
+   ─────────────────────────────────────────────────────────────────── */
+:root {
+  --type-grass-text: #48842A;             /* #78C850 is 2.06:1 on white -> 4.56:1 */
+  --type-fire-text: #BF580E;              /* #F08030 is 2.68:1 on white -> 4.55:1 */
+  --type-water-text: #396DEB;             /* #6890F0 is 3.07:1 on white -> 4.60:1 */
+  --type-bug-text: #727D16;               /* #A8B820 is 2.20:1 on white -> 4.51:1 */
+  --type-normal-text: #79794E;            /* #A8A878 is 2.46:1 on white -> 4.51:1 */
+  --type-poison-text: #A040A0;            /* #A040A0 is 5.62:1 on white -> 5.62:1 */
+  --type-electric-text: #8F7305;          /* #F8D030 is 1.49:1 on white -> 4.54:1 */
+  --type-ground-text: #90721E;            /* #E0C068 is 1.76:1 on white -> 4.55:1 */
+  --type-fairy-text: #DD3157;             /* #EE99AC is 2.15:1 on white -> 4.51:1 */
+  --type-fighting-text: #C03028;          /* #C03028 is 5.68:1 on white -> 5.68:1 */
+  --type-psychic-text: #E80A4C;           /* #F85888 is 3.11:1 on white -> 4.59:1 */
+  --type-rock-text: #867529;              /* #B8A038 is 2.59:1 on white -> 4.57:1 */
+  --type-ghost-text: #705898;             /* #705898 is 5.94:1 on white -> 5.94:1 */
+  --type-ice-text: #318080;               /* #98D8D8 is 1.60:1 on white -> 4.64:1 */
+  --type-dragon-text: #7038F8;            /* #7038F8 is 5.82:1 on white -> 5.82:1 */
+  --type-flying-text: #805DE9;            /* #A890F0 is 2.65:1 on white -> 4.51:1 */
+  --type-steel-text: #7171A1;             /* #B8B8D0 is 1.94:1 on white -> 4.59:1 */
+  --type-dark-text: #705848;              /* #705848 is 6.61:1 on white -> 6.61:1 */
+}
+
+
+
+/* ── Focus visibility (T22) ────────────────────────────────────────────
+   Keyboard users need to see where they are. Only the theme toggle had a
+   :focus-visible rule; everything else inherited whatever Bootstrap left,
+   and `.form-control:focus` actively set `outline: none`.
+
+   :focus-visible rather than :focus, so a mouse click does not draw a ring
+   the pointer user did not ask for. The offset keeps the ring clear of the
+   element's own border, and the two-tone outline stays visible on both the
+   red navbar and the page surface. */
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Bootstrap sets `.btn:focus-visible { outline: 0 }` and substitutes a
+   box-shadow built from --bs-btn-focus-box-shadow. Custom buttons like
+   .btn-theme never define that variable, so they ended up with no outline and
+   no shadow — invisible keyboard focus on seven controls on /pokemon-ml.
+   These selectors match Bootstrap's specificity and, loading after it, win. */
+.btn:focus-visible,
+.btn-close:focus-visible,
+.nav-link:focus-visible,
+.dropdown-item:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-range:focus-visible,
+.tab-button:focus-visible,
+.filter-chip:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The navbar is Pokédex red; an accent-red ring would vanish into it. */
+.navbar :focus-visible,
+.bg-pokemon :focus-visible {
+  outline-color: #FFFFFF;
 }

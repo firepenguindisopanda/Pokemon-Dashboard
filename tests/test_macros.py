@@ -161,7 +161,24 @@ class TestStatBarOutput:
         # refactor is not allowed to change a single character of output.
         assert "width:18.0%" in html, f"percentage wrong: {html}"
         assert "background:#78C850" in html
-        assert '<span class="stat-value" style="color:#78C850;">45</span>' in html
+        # T22 split fill colour from text colour. The bar keeps the vivid type
+        # colour (correct behind an 8px bar); the number no longer takes it,
+        # because #78C850 on white is 2.06:1. With no `type_name` the value
+        # inherits the surrounding text colour rather than an unreadable one.
+        assert '<span class="stat-value">45</span>' in html
+        assert 'style="color:#78C850' not in html
+
+    def test_stat_bar_colours_the_value_with_the_accessible_token(self):
+        """T22: `type_name` opts the number into the AA-darkened token."""
+        html = render_macro(
+            {
+                "import": "stat_bar",
+                "body": "{{ stat_bar('HP', 45, 255, '#78C850', type_name='grass') }}",
+            }
+        )
+        assert '<span class="stat-value type-text-grass">45</span>' in html
+        # The fill is unchanged — only the text moved.
+        assert "background:#78C850" in html
 
     def test_stat_bar_supports_the_dimmed_total_row(self):
         html = render_macro(
@@ -203,14 +220,21 @@ class TestStatBarOutput:
 
 class TestSectionHeaderOutput:
     def test_header_with_icon_and_accent(self):
+        """T22 replaced the `color` hex argument with a `color_class`.
+
+        A raw type colour as heading text is 2.06:1 at worst. The class resolves
+        to the same hue darkened to AA, and moving it out of a style attribute
+        means a caller can no longer pass an arbitrary failing colour.
+        """
         html = render_macro(
             {
                 "import": "section_header",
-                "body": "{{ section_header('About', icon='fa-info-circle', color='#78C850') }}",
+                "body": "{{ section_header('About', icon='fa-info-circle', "
+                        "color_class='type-text-grass') }}",
             }
         )
         assert html == (
-            '<h5 class="fw-bold mb-3" style="color:#78C850;">'
+            '<h5 class="fw-bold mb-3 type-text-grass">'
             '<i class="fas fa-info-circle me-2"></i>About</h5>'
         )
 

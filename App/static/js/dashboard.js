@@ -5,6 +5,25 @@
 // ── Constants ──
 const TEAM_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
+// ── Server-rendered page data ──
+// T21 moved the page scripts into static files, which cannot hold Jinja
+// output. Each page emits its data as a <script type="application/json">
+// island instead; `| tojson` escapes angle brackets, so no value can close the
+// tag early. Returns null when the island is absent, which is the normal case
+// on the six pages that have no data to pass.
+function readPageData(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return null;
+    try {
+        return JSON.parse(el.textContent);
+    } catch (e) {
+        console.error('Malformed page data in #' + elementId, e);
+        return null;
+    }
+}
+
+window.readPageData = readPageData;
+
 // ── Chart.js Memory Management ──
 const activeCharts = {};
 
@@ -58,14 +77,22 @@ function showToast(message, type) {
     if (!container) return;
 
     const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
-    const bgClasses = { success: 'bg-success', error: 'bg-danger', info: 'bg-info', warning: 'bg-warning text-dark' };
+    // T22: bg-info and bg-warning are pale Bootstrap fills — white text on
+    // #0DCAF0 is 1.96:1. Those two take dark text; the dark fills keep white.
+    const bgClasses = { success: 'bg-success', error: 'bg-danger', info: 'bg-info', warning: 'bg-warning' };
+    const darkText = { info: true, warning: true };
 
     const toastEl = document.createElement('div');
-    toastEl.className = 'toast align-items-center text-white border-0 ' + (bgClasses[type] || 'bg-secondary');
-    toastEl.setAttribute('role', 'alert');
-    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.className = 'toast align-items-center border-0 '
+        + (darkText[type] ? 'text-dark ' : 'text-white ')
+        + (bgClasses[type] || 'bg-secondary');
+    // T22: axe flagged the close button as `button-name` (critical) — it renders
+    // as an empty <button>, so a screen reader announces nothing at all.
+    // Errors interrupt (assertive); routine confirmations wait their turn.
+    toastEl.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toastEl.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
     toastEl.setAttribute('aria-atomic', 'true');
-    toastEl.innerHTML = '<div class="d-flex"><div class="toast-body"><i class="fas ' + (icons[type] || 'fa-info-circle') + ' me-2"></i>' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+    toastEl.innerHTML = '<div class="d-flex"><div class="toast-body"><i class="fas ' + (icons[type] || 'fa-info-circle') + ' me-2"></i>' + message + '</div><button type="button" class="btn-close ' + (darkText[type] ? '' : 'btn-close-white ') + 'me-2 m-auto" data-bs-dismiss="toast" aria-label="Close notification"></button></div>';
     container.appendChild(toastEl);
     const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
     toast.show();

@@ -39,13 +39,22 @@
     label_width: min-width override; the TOTAL row needs 50px to fit.
     row_classes: class list for the row; the TOTAL row adds a top border.
 #}
-{% macro stat_bar(label, value, max_value, color, opacity=none, label_width=none, row_classes='stat-row') -%}
+{#
+  `color` fills the bar; `type_name` colours the number.
+
+  They are not the same value, and T22 is why. The vivid type colour is right
+  behind an 8px bar and unreadable as text — #78C850 on white is 2.06:1. The
+  number now takes `.type-text-<type>`, which resolves to the darkened
+  `--type-*-text` token. Callers that pass no `type_name` get the default text
+  colour rather than an inaccessible one.
+#}
+{% macro stat_bar(label, value, max_value, color, opacity=none, label_width=none, row_classes='stat-row', type_name=none) -%}
 <div class="{{ row_classes }}">
             <span class="stat-label"{% if label_width %} style="min-width:{{ label_width }};"{% endif %}>{{ label }}</span>
             <div class="stat-bar-track">
               <div class="stat-bar-fill" style="width:{{ (value / max_value * 100) | round }}%; background:{{ color }};{% if opacity %} opacity:{{ opacity }};{% endif %}"></div>
             </div>
-            <span class="stat-value" style="color:{{ color }};">{{ value }}</span>
+            <span class="stat-value{% if type_name %} type-text-{{ type_name }}{% endif %}">{{ value }}</span>
           </div>
 {%- endmacro %}
 
@@ -56,12 +65,14 @@
   Args:
     text: the heading text.
     icon: Font Awesome name without the `fas` prefix, e.g. "fa-info-circle".
-    color: accent colour for the text.
+    color_class: a `.type-text-<type>` class for the accent. T22 replaced the
+      old `color` hex argument: a raw type colour as heading text is 2.06:1 at
+      worst, and the token behind this class is the same hue darkened to AA.
     level: heading level, default h5.
     classes: class list, default the `fw-bold mb-3` the detail page uses.
 #}
-{% macro section_header(text, icon=none, color=none, level='h5', classes='fw-bold mb-3') -%}
-<{{ level }} class="{{ classes }}"{% if color %} style="color:{{ color }};"{% endif %}>{% if icon %}<i class="fas {{ icon }} me-2"></i>{% endif %}{{ text }}</{{ level }}>
+{% macro section_header(text, icon=none, color_class=none, level='h5', classes='fw-bold mb-3') -%}
+<{{ level }} class="{{ classes }}{% if color_class %} {{ color_class }}{% endif %}">{% if icon %}<i class="fas {{ icon }} me-2"></i>{% endif %}{{ text }}</{{ level }}>
 {%- endmacro %}
 
 
@@ -107,7 +118,10 @@
                  loading="lazy">
           </div>
           <div class="card-body text-center d-flex flex-column align-items-center">
-            <h6 class="card-title fw-bold mb-1" style="color: {{ color }};">
+            {# The title takes the darkened token, not `color`. The gradient
+               above keeps the vivid original — this was 982 titles at 2.06:1
+               on /pokemon-area, the largest single contrast failure in the app. #}
+            <h6 class="card-title fw-bold mb-1 type-text-{{ pokemon.type1.lower() }}">
               {{ pokemon.name }}
             </h6>
             <p class="text-muted small mb-1">#{{ '%03d' % pokemon.pokedex_number }}</p>

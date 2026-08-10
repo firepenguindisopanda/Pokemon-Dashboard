@@ -2,82 +2,9 @@
 {% from "_macros.html" import section_header %}
 {% block title %}Pokémon Dashboard - Sign Up{% endblock %}
 
-{% block styles %}
-main {
-  display: flex;
-  flex-direction: column;
-}
-.signup-page {
-  flex: 1;
-  background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-}
-
-.signup-page::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
-  animation: signup-glow 8s ease-in-out infinite alternate;
-  z-index: 1;
-}
-
-@keyframes signup-glow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-5%, -5%); }
-}
-
-.signup-card {
-  width: 100%;
-  max-width: 480px;
-  border-radius: 4px;
-  z-index: 2;
-}
-
-.signup-icon {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #C62828, #E53935);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: white;
-  margin: 0 auto 16px;
-}
-
-.password-toggle {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
-  cursor: pointer;
-  z-index: 5;
-  color: #6c757d;
-  background: none;
-  border: none;
-  padding: 0;
-  line-height: 1;
-}
-
-.password-toggle:hover {
-  color: #C62828;
-}
-
-.password-requirements li.valid {
-  color: #198754;
-}
-{% endblock %}
+{# Styles live in static/css/pages.css, scoped under .signup-page.
+   `.main-stretch` gives this page's `flex: 1` a flex parent to fill. #}
+{% block main_class %} main-stretch{% endblock %}
 
 {% block content %}
 <div class="signup-page">
