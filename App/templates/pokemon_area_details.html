@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import stat_bar, section_header %}
 
 {% set type_colors = {
   "grass": "#78C850", "fire": "#F08030", "water": "#6890F0",
@@ -41,17 +42,8 @@
   border-radius: 50%;
   background: rgba(255,255,255,0.05);
 }
-.stat-label {
-  min-width: 50px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  color: #555;
-}
-.stat-value {
-  min-width: 36px;
-  text-align: right;
-  font-weight: 700;
-}
+/* .stat-row, .stat-label, .stat-value, .stat-bar-track and .stat-bar-fill
+   moved to static/css/components.css alongside the stat_bar macro. */
 .type-badge-lg {
   padding: 6px 18px;
   border-radius: 20px;
@@ -71,24 +63,6 @@
 }
 .info-card:hover {
   transform: translateY(-2px);
-}
-.stat-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.stat-bar-track {
-  flex: 1;
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.stat-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
 }
 .ability-chip {
   display: inline-block;
@@ -145,7 +119,7 @@
       <div class="bg-white rounded-bottom-4 shadow-sm p-4 p-md-5" style="border-top:4px solid {{ accent }};">
 
         <!-- About Section -->
-        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-info-circle me-2"></i>About</h5>
+        {{ section_header('About', icon='fa-info-circle', color=accent) }}
         <div class="row g-3 mb-4">
           <div class="col-6 col-md-4">
             <div class="info-card p-3 text-center h-100" style="background:#fafafa;">
@@ -198,7 +172,7 @@
         </div>
 
         <!-- Abilities -->
-        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-bolt me-2"></i>Abilities</h5>
+        {{ section_header('Abilities', icon='fa-bolt', color=accent) }}
         <div class="mb-4">
           {% if pokemon.abilities is iterable and pokemon.abilities is not string %}
             {% for ability in pokemon.abilities %}
@@ -210,7 +184,7 @@
         </div>
 
         <!-- Base Stats -->
-        <h5 class="fw-bold mb-3" style="color:{{ accent }};"><i class="fas fa-chart-bar me-2"></i>Base Stats</h5>
+        {{ section_header('Base Stats', icon='fa-chart-bar', color=accent) }}
         {% set stats = [
           ('HP', pokemon.hp),
           ('ATK', pokemon.attack),
@@ -221,24 +195,12 @@
         ] %}
         <div class="mb-2">
           {% for label, value in stats %}
-          <div class="stat-row">
-            <span class="stat-label">{{ label }}</span>
-            <div class="stat-bar-track">
-              <div class="stat-bar-fill" style="width:{{ (value / stat_max * 100) | round }}%; background:{{ accent }};"></div>
-            </div>
-            <span class="stat-value" style="color:{{ accent }};">{{ value }}</span>
-          </div>
+          {{ stat_bar(label, value, stat_max, accent) }}
           {% endfor %}
         </div>
 
         <!-- Total stat row -->
-        <div class="stat-row border-top pt-2 mt-2">
-          <span class="stat-label" style="min-width:50px;">TOTAL</span>
-          <div class="stat-bar-track">
-            <div class="stat-bar-fill" style="width:{{ (pokemon.base_total / (stat_max * 6) * 100) | round }}%; background:{{ accent }}; opacity:0.6;"></div>
-          </div>
-          <span class="stat-value" style="color:{{ accent }};">{{ pokemon.base_total }}</span>
-        </div>
+        {{ stat_bar('TOTAL', pokemon.base_total, stat_max * 6, accent, opacity=0.6, label_width='50px', row_classes='stat-row border-top pt-2 mt-2') }}
       </div>
 
     </div>

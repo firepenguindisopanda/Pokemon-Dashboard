@@ -15,9 +15,7 @@
             <div id="analytics-status-banner" style="display:none;" class="alert alert-info py-2 mb-2 text-center">
                 <i class="fas fa-spinner fa-spin me-2"></i> Preparing analytics engine...
             </div>
-            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-label">Dark</span>
-            </button>
+            {# The theme toggle now lives in layout.html's nav, on all 9 pages. #}
         </div>
     </div>
 
@@ -290,7 +288,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{# dashboard.js is loaded by layout.html for every page — see the note in
+   pokemon_dashboard.html. #}
 <script>
     const typeColors = {{ type_colors | tojson }};
     let currentStats = {};
@@ -806,12 +805,7 @@
 
     // ── Initialize ──
     document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('pokemon-theme') || 'light';
-        applyTheme(savedTheme);
-        document.getElementById('theme-toggle')?.addEventListener('click', function() {
-            const current = document.documentElement.getAttribute('data-theme') || 'light';
-            applyTheme(current === 'dark' ? 'light' : 'dark');
-        });
+        // Theme setup lives in layout.html and dashboard.js now.
         const hash = window.location.hash.replace('#', '') || 'team-builder';
         showTab(hash);
         var params = new URLSearchParams(window.location.search);

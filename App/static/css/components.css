@@ -1,0 +1,64 @@
+/* ══════════════════════════════════════════════════════════════════
+   Component styles — the CSS half of App/templates/_macros.html.
+
+   These rules were previously in a <style> block inside
+   pokemon_area_details.html, which meant the stat bar could not be used
+   anywhere else without copying its styling too.
+
+   Values are carried over EXACTLY, including the literal #555 and
+   #e9ecef. Swapping them for the nearest tokens looked tempting and
+   would have been wrong: --color-border is #E0E0E0, not #e9ecef, so the
+   track would have changed shade. T20's contract is that nothing moves
+   on screen.
+
+   Two follow-ups deliberately left for T22, the accessibility pass:
+     - the hard-coded greys do not respond to the dark theme (they never
+       did — the inline block was static too)
+     - `transition: width` has no prefers-reduced-motion escape
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── stat_bar ──
+   Every rule is scoped under .stat-row, which only the stat_bar macro
+   emits. That is load-bearing, not tidiness: styles.css already defines
+   bare `.stat-label` and `.stat-value` for the analytics dashboard's
+   stat cards (2rem, uppercase, letter-spaced). This file loads after it,
+   so unscoped copies here would have silently restyled that page —
+   shrinking its numbers and right-aligning them.
+
+   Scoping also restores the precedence the inline <style> block used to
+   get for free: .stat-row .stat-label (0,2,0) outranks .stat-label
+   (0,1,0) no matter what order the stylesheets load in. */
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.stat-row .stat-label {
+  min-width: 50px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.stat-row .stat-value {
+  min-width: 36px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.stat-row .stat-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stat-row .stat-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}

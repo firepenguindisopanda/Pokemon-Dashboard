@@ -5,9 +5,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Pokémon Dashboard{% endblock %}</title>
+
+  {# Applies the stored theme before anything paints. This must stay inline,
+     synchronous, and ahead of the stylesheets: as a deferred or external
+     script it would run after first paint, which is exactly the flash of
+     light mode this replaced. #}
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('pokemon-theme');
+        if (!stored) {
+          stored = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', stored);
+      } catch (e) {
+        /* Private mode can throw on localStorage; light is a fine fallback. */
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
   <style>
     {% block styles %}{% endblock %}
   </style>
@@ -25,9 +47,19 @@
       <a class="navbar-brand fw-bold" href="{% if is_auth %}{{ url_for('pokemon.home_page') }}{% else %}#{% endif %}">
         <i class="fas fa-pokeball"></i> Pokémon Dashboard
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      {# Outside the collapse so it stays reachable when the nav is collapsed,
+         and ordered last on wide screens so it reads as a page-level control
+         rather than a nav item. Present on every page, including the public
+         login and signup screens. #}
+      <div class="d-flex align-items-center ms-auto order-lg-last">
+        <button class="theme-toggle-nav me-2" type="button" id="theme-toggle" aria-label="Toggle dark mode">
+          <i class="fas fa-moon" id="theme-icon" aria-hidden="true"></i>
+          <span id="theme-label">Dark</span>
+        </button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
       <div class="collapse navbar-collapse" id="navbarNav">
         {% if is_auth %}
         <ul class="navbar-nav me-auto">

@@ -15,9 +15,7 @@
             <div id="analytics-status-banner" style="display:none;" class="alert alert-info py-2 mb-2 text-center">
                 <i class="fas fa-spinner fa-spin me-2"></i> Preparing analytics engine...
             </div>
-            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-label">Dark</span>
-            </button>
+            {# The theme toggle now lives in layout.html's nav, on all 9 pages. #}
         </div>
     </div>
 
@@ -130,7 +128,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{# dashboard.js is loaded by layout.html for every page. Loading it again here
+   threw "Identifier 'TEAM_COLORS' has already been declared", which aborted
+   this second copy outright. #}
 <script>
     const typeColors = {{ type_colors | tojson }};
 
@@ -242,15 +242,7 @@
 
     // ── Filter chip handlers ──
     document.addEventListener('DOMContentLoaded', function() {
-        // Apply saved theme
-        const savedTheme = localStorage.getItem('pokemon-theme') || 'light';
-        applyTheme(savedTheme);
-
-        // Theme toggle handler
-        document.getElementById('theme-toggle')?.addEventListener('click', function() {
-            const current = document.documentElement.getAttribute('data-theme') || 'light';
-            applyTheme(current === 'dark' ? 'light' : 'dark');
-        });
+        // Theme setup lives in layout.html and dashboard.js now.
 
         // Load overview data on page load
         loadOverviewData();

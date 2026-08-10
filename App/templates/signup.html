@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import section_header %}
 {% block title %}Pokémon Dashboard - Sign Up{% endblock %}
 
 {% block styles %}
@@ -86,7 +87,7 @@ main {
         <div class="signup-icon">
           <i class="fas fa-user-plus"></i>
         </div>
-        <h4 class="fw-bold mb-1">Join the Adventure</h4>
+        {{ section_header('Join the Adventure', level='h4', classes='fw-bold mb-1') }}
         <p class="text-muted small">Create your Pokémon Dashboard account</p>
       </div>
 

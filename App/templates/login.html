@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import section_header %}
 {% block title %}Pokémon Dashboard - Login{% endblock %}
 
 {% block styles %}
@@ -82,7 +83,7 @@ main {
         <div class="login-icon">
           <i class="fas fa-pokeball"></i>
         </div>
-        <h4 class="fw-bold mb-1">Welcome Back!</h4>
+        {{ section_header('Welcome Back!', level='h4', classes='fw-bold mb-1') }}
         <p class="text-muted small">Sign in to your Pokémon Dashboard</p>
       </div>
 

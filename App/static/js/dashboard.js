@@ -19,14 +19,37 @@ function safeCreateChart(key, ctx, config) {
 }
 
 // ── Theme Toggle ──
+// The theme itself is applied by an inline script in layout.html's <head>, so
+// it is already in place before the first paint. This only keeps the button's
+// icon and label in sync and handles clicks.
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('pokemon-theme', theme);
+    try {
+        localStorage.setItem('pokemon-theme', theme);
+    } catch (e) {
+        /* Private mode: the theme still applies, it just will not persist. */
+    }
     const icon = document.getElementById('theme-icon');
     const label = document.getElementById('theme-label');
     if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
     if (label) label.textContent = theme === 'dark' ? 'Light' : 'Dark';
 }
+
+function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'light';
+}
+
+// Wired here rather than per page: the toggle lives in the shared layout, and
+// two of the nine pages used to carry their own copy of this.
+document.addEventListener('DOMContentLoaded', function () {
+    applyTheme(currentTheme());
+    const toggle = document.getElementById('theme-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+        });
+    }
+});
 
 // ── Toast Notifications ──
 function showToast(message, type) {

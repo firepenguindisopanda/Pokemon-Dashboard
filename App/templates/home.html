@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_macros.html" import type_badge %}
 
 {% set type_colors = {
   "grass": "#78C850", "fire": "#F08030", "water": "#6890F0",
@@ -50,9 +51,9 @@
                    alt="{{ p.name }}" width="40" height="40" loading="lazy" class="me-2">
               <span>#{{ '%03d' % p.pokedex_number }} {{ p.name }}</span>
               <span class="ms-auto">
-                <span class="type-badge type-badge-sm type-{{ p.type1.lower() }}">{{ p.type1 }}</span>
+                {{ type_badge(p.type1, small=true) }}
                 {% if p.type2 %}
-                <span class="type-badge type-badge-sm type-{{ p.type2.lower() }} ms-1">{{ p.type2 }}</span>
+                {{ type_badge(p.type2, small=true, extra='ms-1') }}
                 {% endif %}
               </span>
             </a>
@@ -76,10 +77,10 @@
           </h4>
           <div class="mb-3">
             {% if pokemon.type1 %}
-            <span class="type-badge type-{{ pokemon.type1.lower() }} me-1">{{ pokemon.type1 }}</span>
+            {{ type_badge(pokemon.type1, extra='me-1') }}
             {% endif %}
             {% if pokemon.type2 %}
-            <span class="type-badge type-{{ pokemon.type2.lower() }}">{{ pokemon.type2 }}</span>
+            {{ type_badge(pokemon.type2) }}
             {% endif %}
           </div>
           <div class="row g-2 mb-3">

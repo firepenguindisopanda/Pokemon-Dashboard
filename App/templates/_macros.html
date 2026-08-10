@@ -1,0 +1,126 @@
+{#
+  Shared UI components.
+
+  Each of these was re-implemented per template, with small drifts between
+  copies — type badges appeared in four class orders, and the stat bar existed
+  twice in one file. The markup here is byte-for-byte what those call sites
+  emitted, so adopting a macro changes nothing on screen. `tasks/page-baseline.py`
+  is what proves that.
+
+  Whitespace control matters more than usual: a stray newline inside a <span>
+  changes the rendered output, so every macro trims deliberately.
+
+  Usage:
+      {% from "_macros.html" import type_badge, stat_bar %}
+#}
+
+{#
+  A Pokémon type chip.
+
+  Args:
+    name: display name, e.g. "Grass". The CSS class is lowercased from it.
+    small: use the compact variant (`type-badge-sm`).
+    extra: additional classes, typically a Bootstrap spacing utility.
+#}
+{% macro type_badge(name, small=false, extra='') -%}
+<span class="type-badge{% if small %} type-badge-sm{% endif %} type-{{ name.lower() }}{% if extra %} {{ extra }}{% endif %}">{{ name }}</span>
+{%- endmacro %}
+
+
+{#
+  One labelled stat with a proportional bar.
+
+  Args:
+    label: short stat name, e.g. "ATK".
+    value: the stat.
+    max_value: what a full bar represents.
+    color: accent colour, applied to both the fill and the value.
+    opacity: set on the fill; the TOTAL row dims itself to 0.6.
+    label_width: min-width override; the TOTAL row needs 50px to fit.
+    row_classes: class list for the row; the TOTAL row adds a top border.
+#}
+{% macro stat_bar(label, value, max_value, color, opacity=none, label_width=none, row_classes='stat-row') -%}
+<div class="{{ row_classes }}">
+            <span class="stat-label"{% if label_width %} style="min-width:{{ label_width }};"{% endif %}>{{ label }}</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width:{{ (value / max_value * 100) | round }}%; background:{{ color }};{% if opacity %} opacity:{{ opacity }};{% endif %}"></div>
+            </div>
+            <span class="stat-value" style="color:{{ color }};">{{ value }}</span>
+          </div>
+{%- endmacro %}
+
+
+{#
+  A section heading, optionally with a Font Awesome icon and an accent colour.
+
+  Args:
+    text: the heading text.
+    icon: Font Awesome name without the `fas` prefix, e.g. "fa-info-circle".
+    color: accent colour for the text.
+    level: heading level, default h5.
+    classes: class list, default the `fw-bold mb-3` the detail page uses.
+#}
+{% macro section_header(text, icon=none, color=none, level='h5', classes='fw-bold mb-3') -%}
+<{{ level }} class="{{ classes }}"{% if color %} style="color:{{ color }};"{% endif %}>{% if icon %}<i class="fas {{ icon }} me-2"></i>{% endif %}{{ text }}</{{ level }}>
+{%- endmacro %}
+
+
+{#
+  A loading placeholder shaped like a Pokémon card.
+
+  The `.skeleton-*` rules have been sitting in styles.css unused — nothing in
+  the app ever rendered this markup. The macro gives them a call site; adopting
+  it in place of the dashboard's spinner is deliberately left to T21, because
+  swapping it in now would change what the page looks like, and T20's whole
+  contract is that nothing does.
+#}
+{% macro skeleton(bars=3) -%}
+<div class="skeleton-card">
+  <div class="skeleton-img"></div>
+  <div class="skeleton-text wide"></div>
+  <div class="skeleton-text medium"></div>
+  {% for _ in range(bars) %}<div class="skeleton-bar"></div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+
+{#
+  The Pokémon grid card used by the Pokémon Area listing.
+
+  Args:
+    pokemon: an object or mapping with pokemon_id, name, pokedex_number,
+      type1 and optional type2.
+    color: the type-derived accent used by the gradient and the title.
+#}
+{#
+  Attribute access works for both ORM objects and plain dicts — Jinja's getattr
+  falls back to item lookup — so no unwrapping is needed here.
+#}
+{% macro pokemon_card(pokemon, color) -%}
+<div class="card pokemon-area-card h-100">
+          <div class="card-gradient text-center p-3" style="background: linear-gradient(135deg, {{ color }}dd, {{ color }}88);">
+            <div class="deco-circle" style="top:-50%;right:-20%;width:140px;height:140px;"></div>
+            <div class="deco-circle" style="bottom:-30%;left:-10%;width:100px;height:100px;"></div>
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
+                 alt="{{ pokemon.name }}" class="sprite-wrap"
+                 loading="lazy">
+          </div>
+          <div class="card-body text-center d-flex flex-column align-items-center">
+            <h6 class="card-title fw-bold mb-1" style="color: {{ color }};">
+              {{ pokemon.name }}
+            </h6>
+            <p class="text-muted small mb-1">#{{ '%03d' % pokemon.pokedex_number }}</p>
+            <div class="mb-2">
+              {{ type_badge(pokemon.type1) }}
+              {% if pokemon.type2 %}
+              {{ type_badge(pokemon.type2, extra='ms-1') }}
+              {% endif %}
+            </div>
+            <a href="/pokemon-area/pokemon-details/{{ pokemon.pokemon_id }}"
+               class="btn btn-sm btn-outline-danger mt-auto">
+              <i class="fas fa-eye me-1"></i>Details
+            </a>
+          </div>
+        </div>
+{%- endmacro %}

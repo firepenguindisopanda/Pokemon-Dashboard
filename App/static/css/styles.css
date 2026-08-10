@@ -1,9 +1,5 @@
-:root {
-  --pokemon-red: #C62828;
-  --pokemon-red-dark: #B71C1C;
-  --pokemon-gold: #F9A825;
-  --pokemon-bg: #F5F5F5;
-}
+/* Colour, spacing, type, radius and shadow live in tokens.css, which is
+   loaded first. Defining them here again would shadow the dark values. */
 
 .bg-pokemon {
   background-color: var(--pokemon-red) !important;
@@ -315,53 +311,7 @@
    Extracted from pokemon_dashboard.html
    ══════════════════════════════════════════════════ */
 
-:root {
-    --bg-primary: #f0f2f5;
-    --bg-body: #667eea;
-    --bg-card: rgba(255, 255, 255, 0.92);
-    --text-primary: #1a1a2e;
-    --text-secondary: #555;
-    --text-muted: #888;
-    --glass-border: rgba(255, 255, 255, 0.3);
-    --glass-shadow: rgba(0, 0, 0, 0.08);
-    --accent-gradient: #667eea;
-    --accent-color: #667eea;
-    --btn-gradient: #667eea;
-    --btn-shadow: rgba(102, 126, 234, 0.4);
-    --card-accent-border: #f0f0f0;
-    --input-bg: #ffffff;
-    --input-border: #e0e0e0;
-    --input-focus: #667eea;
-    --stat-color: #667eea;
-    --info-bg: rgba(102, 126, 234, 0.1);
-    --pokemon-card-bg: #f8f9fa;
-    --skeleton-bg: #e0e0e0;
-    --skeleton-shine: #f0f0f0;
-}
-
-[data-theme="dark"] {
-    --bg-primary: #0f0f23;
-    --bg-body: #1a1a3e;
-    --bg-card: rgba(25, 25, 50, 0.9);
-    --text-primary: #e0e0ff;
-    --text-secondary: #999;
-    --text-muted: #666;
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: rgba(0, 0, 0, 0.3);
-    --accent-gradient: #7c4dff;
-    --accent-color: #7c4dff;
-    --btn-gradient: #7c4dff;
-    --btn-shadow: rgba(124, 77, 255, 0.4);
-    --card-accent-border: rgba(255, 255, 255, 0.06);
-    --input-bg: rgba(30, 30, 60, 0.8);
-    --input-border: rgba(255, 255, 255, 0.15);
-    --input-focus: #7c4dff;
-    --stat-color: #7c4dff;
-    --info-bg: rgba(124, 77, 255, 0.15);
-    --pokemon-card-bg: rgba(30, 30, 60, 0.8);
-    --skeleton-bg: rgba(255, 255, 255, 0.08);
-    --skeleton-shine: rgba(255, 255, 255, 0.15);
-}
+/* Both palettes and their dark values now live in tokens.css. */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
