@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import pokeball_icon %}
+
+{% block title %}Trainer Chat — Coming Soon{% endblock %}
+
+{# Shown at /chat whenever CHAT_ENABLED is false, which is the default.
+
+   Deliberately a 200 and not a 404: a logged-in trainer followed a nav link
+   here while the feature was open, and "this page does not exist" is a worse
+   answer than "not yet". The real closure is elsewhere — the two /api/chat
+   endpoints 404, and the SocketIO handshake is refused, which is what makes
+   the feature actually unreachable rather than merely unlinked.
+
+   This template loads neither socket.io nor chat.js. A page that loaded them
+   would open a socket the server only refuses, which costs a request and puts
+   an error in the console of a page whose entire message is "not yet".
+
+   Styles are scoped under .coming-soon-page in pages.css. #}
+
+{% block content %}
+<div class="container py-5 coming-soon-page">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+      <div class="card text-center">
+        <div class="card-body p-4 p-md-5">
+
+          <div class="coming-soon-mark" aria-hidden="true">
+            {{ pokeball_icon(size="48px") }}
+          </div>
+
+          <h1 class="coming-soon-title">Trainer Chat</h1>
+          <p class="coming-soon-badge">Coming soon</p>
+
+          <p class="coming-soon-text">
+            We're still building this one. Trainer Chat will let you talk
+            tactics with other trainers in type-themed rooms.
+          </p>
+
+          <a href="{{ url_for('pokemon.home_page') }}" class="btn btn-danger">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Back to your Pokémon
+          </a>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

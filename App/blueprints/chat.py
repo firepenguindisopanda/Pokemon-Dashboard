@@ -22,7 +22,7 @@ makes "the last 50, oldest first" undefined — and SQLite hides it by happening
 to return rowid order, which is exactly how a Postgres-only bug ships green.
 """
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, abort, current_app, jsonify, render_template, request
 from flask_jwt_extended import current_user, jwt_required
 
 from App.constants import CHAT_ROOMS
@@ -165,6 +165,17 @@ def _requested_limit(raw):
         return DEFAULT_HISTORY
 
 
+def chat_is_enabled():
+    """Whether the chat feature is switched on.
+
+    Read from `app.config` rather than the Settings object so there is one
+    source of truth at request time and tests can flip it. The socket handshake
+    in App/sockets.py checks the same key — the four entry points must agree,
+    because closing three of them is the same as closing none.
+    """
+    return current_app.config.get("CHAT_ENABLED", False)
+
+
 @chat_bp.route("/api/chat/<room>/history", methods=["GET"])
 @jwt_required()
 def room_history(room):
@@ -173,6 +184,11 @@ def room_history(room):
     Authenticated: chat is not public, and this is the same data the socket
     hands out on join.
     """
+    # 404 rather than the page's friendly 200: nobody navigates here, and a
+    # fetch has nothing to do with a "coming soon" message.
+    if not chat_is_enabled():
+        abort(404)
+
     if not is_valid_room(room):
         # 404 rather than an empty 200: an unknown room does not exist, and
         # answering with `{"messages": []}` would make a typo look like a quiet
@@ -187,6 +203,8 @@ def room_history(room):
 @jwt_required()
 def list_rooms():
     """The room whitelist, so the client never has to hard-code it."""
+    if not chat_is_enabled():
+        abort(404)
     return jsonify({"rooms": list(CHAT_ROOMS)})
 
 
@@ -203,6 +221,13 @@ def chat_page():
     one code path for "the last 50 messages" instead of a server-rendered list
     that has to agree with a socket-delivered one.
     """
+    # A page, so a page answer: 200 with an explanation. A 404 would tell a
+    # logged-in user the feature never existed, when they followed a nav link
+    # here yesterday. The template loads neither socket.io nor chat.js, so the
+    # browser does not open a socket the server would only refuse.
+    if not chat_is_enabled():
+        return render_template("chat_coming_soon.html")
+
     page_data = {
         "username": current_user.username,
         "user_id": current_user.id,

@@ -22,6 +22,28 @@ place in this application where that is true.
 import re
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _chat_enabled():
+    """Turn the feature on for this file.
+
+    `CHAT_ENABLED` defaults to False — trainer chat ships closed while it is
+    still being built — so without this every test here would be asserting
+    against a "coming soon" page and a refused socket.
+
+    The feature is gated, not deleted, and this is what keeps it covered while
+    it is switched off. `tests/test_chat_disabled.py` asserts the other half.
+    """
+    from App.app import app as _app
+
+    previous = _app.config.get("CHAT_ENABLED")
+    _app.config["CHAT_ENABLED"] = True
+    yield
+    _app.config["CHAT_ENABLED"] = previous
+
+
 TEMPLATES = Path("App/templates")
 CHAT_HTML = TEMPLATES / "chat.html"
 CHAT_JS = Path("App/static/js/chat.js")

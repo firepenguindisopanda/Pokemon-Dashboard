@@ -111,6 +111,21 @@ class Settings(BaseSettings):
     # rate-limiter keys.
     socketio_channel: str = "pokemon-dashboard:socketio"
 
+    # ── Feature flags ──
+    # Trainer chat is still being built, so it ships closed.
+    #
+    # Default False deliberately: the failure worth preventing is shipping a
+    # half-finished feature by forgetting to turn it off, not forgetting to
+    # turn it on — a developer who wants it notices immediately, a user who
+    # gets it early does not tell anyone.
+    #
+    # This gates FOUR entry points, not one. The page, the two /api/chat
+    # endpoints, and — the one that a route guard does not touch — the
+    # SocketIO handshake. See App/sockets.py.
+    #
+    #     CHAT_ENABLED=true   in .env to work on it locally
+    chat_enabled: bool = False
+
     # ── Rate limiting ──
     # Applies to the authentication endpoints only. Generous enough that a
     # trainer fumbling a password is never affected, tight enough that

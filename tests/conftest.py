@@ -34,6 +34,10 @@ os.environ.update({
     "JWT_SECRET_KEY": "test-only-jwt-key-not-used-outside-the-suite-01234",
     "RATE_LIMIT_AUTH": "20 per minute",
     "RATE_LIMIT_ENABLED": "true",
+    # Pin the feature flag so the suite's baseline is the production default
+    # regardless of what a developer has in .env. The chat tests turn it on
+    # for themselves.
+    "CHAT_ENABLED": "false",
 })
 
 # Keep the suite out of the committed model cache. Training during tests used

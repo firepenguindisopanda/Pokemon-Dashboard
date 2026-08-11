@@ -90,9 +90,14 @@
           <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'analytics.pokemon_ml_playground' %} active{% endif %}" href="{{ url_for('analytics.pokemon_ml_playground') }}">ML Playground</a>
           </li>
+          {# Hidden while chat is switched off. This is presentation only —
+             the route, the two APIs and the socket handshake each enforce the
+             flag themselves, because an unlinked page is not a closed one. #}
+          {% if config.CHAT_ENABLED %}
           <li class="nav-item">
             <a class="nav-link{% if request.endpoint == 'chat.chat_page' %} active{% endif %}" href="{{ url_for('chat.chat_page') }}">Chat</a>
           </li>
+          {% endif %}
         </ul>
         <ul class="navbar-nav">
           <li class="nav-item dropdown">

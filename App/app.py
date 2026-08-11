@@ -126,6 +126,11 @@ def create_app():
     # live deploy the session cookie came back as `HttpOnly; Path=/` with no
     # Secure flag while every JWT cookie had one. Reuse the same setting: if
     # the JWT cookies require HTTPS, so must this one.
+    # Feature flags. Read through app.config rather than the Settings object
+    # directly so a request-time check has one source of truth and tests can
+    # flip it without rebuilding the app.
+    app.config["CHAT_ENABLED"] = settings.chat_enabled
+
     app.config["SESSION_COOKIE_SECURE"] = settings.jwt_cookie_secure
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"

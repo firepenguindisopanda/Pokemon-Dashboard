@@ -234,6 +234,8 @@ class TestPageStylesCannotLeak:
         # The home page had no root at all while it was a three-pane dex
         # browser with no styles of its own to scope. The trainer hub has both.
         ".trainer-home",
+        # Shown at /chat while CHAT_ENABLED is false.
+        ".coming-soon-page",
     }
 
     # Selectors that are deliberately not page-scoped, with the reason.

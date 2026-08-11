@@ -36,7 +36,7 @@ the right target.
 
 import logging
 
-from flask import request
+from flask import current_app, request
 from flask_jwt_extended import verify_jwt_in_request
 from flask_socketio import SocketIO, emit, join_room
 
@@ -177,6 +177,19 @@ def handle_connect(auth=None):
     Returns:
         False to reject. Anything else accepts.
     """
+    # The feature flag is checked HERE, before authentication, and this is the
+    # only place it can be checked effectively.
+    #
+    # A socket does not pass through Flask's view layer, so guarding the /chat
+    # view function does nothing to it. Anyone who loaded the page while it was
+    # open — or who simply reads chat.js — can still open a socket, join a room
+    # and broadcast to everyone else who did the same. Refusing the handshake
+    # is what makes `join` and `send_message` unreachable rather than merely
+    # unadvertised.
+    if not current_app.config.get("CHAT_ENABLED", False):
+        logger.info("Socket handshake rejected: chat is disabled")
+        return False
+
     try:
         verify_jwt_in_request(locations=["cookies"])
     except Exception as exc:
