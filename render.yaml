@@ -36,8 +36,18 @@ services:
     # requires a paid instance type.
     buildCommand: "pip install -r requirements.txt && flask db upgrade && (flask train || echo 'training deferred to first request')"
 
-    # T24 (chat). The sync worker cannot hold a WebSocket open, so it had to
-    # change — but NOT to eventlet, which is what this file used to say.
+    # T24 (chat). The default sync worker had to change — but NOT to eventlet,
+    # which is what this file used to say.
+    #
+    # CORRECTION, measured after a real deploy came up on the default command:
+    # the sync worker *does* accept a WebSocket. An earlier version of this
+    # comment claimed it could not, and that was wrong. The real failure is
+    # worse because it is silent — the sync worker serves one connection at a
+    # time, so a single held socket starves everything else:
+    #     1 socket held  ->  GET /app timed out after 8s
+    #                    ->  a 2nd websocket was refused
+    # One person opening /chat takes the whole site down, with nothing at
+    # connect time to explain why.
     #
     # eventlet 0.41.1 still runs on 3.12, but it now emits an official
     # deprecation warning telling you not to use it for new projects, and both

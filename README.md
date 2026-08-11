@@ -45,10 +45,12 @@ flask db upgrade
 ```bash
 flask run                       # development, port 8080
 
-# Production. The worker class is NOT optional: gunicorn's default sync worker
-# cannot hold a WebSocket open, and chat needs one. --threads is the ceiling on
-# concurrent chat users, because a held socket occupies its thread for the
-# whole connection. render.yaml carries the measurements behind both numbers.
+# Production. The worker class is NOT optional. The default sync worker will
+# accept a WebSocket and then serve nothing else: measured with one socket
+# held open, GET /app timed out after 8s and a second socket was refused. One
+# person on /chat takes the whole site down.
+# --threads is the ceiling on concurrent chat users, because a held socket
+# occupies its thread for the whole connection. render.yaml has the numbers.
 gunicorn --worker-class gthread --threads 64 --timeout 120 wsgi:app
 ```
 

@@ -1,5 +1,8 @@
 .DS_Store
 .env
+# Holds REAL production credentials despite the .example name.
+.env.local.example
+.env.*.local
 *.pyc
 *.pyo
 env/
