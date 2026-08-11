@@ -16,7 +16,10 @@
         </div>
         <div class="card-body text-center">
           <div class="progress mb-3" style="height: 24px;">
-            <div id="quiz-progress" class="progress-bar progress-bar-striped progress-bar-animated"
+            {# Solid fill. Bootstrap draws .progress-bar-striped as a
+               linear-gradient(45deg, ...) and .progress-bar-animated slides it,
+               so both classes are gradients by another name. #}
+            <div id="quiz-progress" class="progress-bar"
                  style="width: 0%;">0 / 10</div>
           </div>
 

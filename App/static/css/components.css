@@ -90,3 +90,14 @@
 .type-text-flying { color: var(--type-flying-text); }
 .type-text-steel { color: var(--type-steel-text); }
 .type-text-dark { color: var(--type-dark-text); }
+
+/* The Pokéball brand mark (see the pokeball_icon macro).
+
+   An inline SVG is `display: inline` by default, which puts it on the text
+   baseline and leaves it sitting low next to the words it accompanies.
+   `vertical-align: -0.125em` is the same correction Font Awesome applies to
+   its own glyphs, so the mark lines up exactly as the icon it replaced did. */
+.pokeball-icon {
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}

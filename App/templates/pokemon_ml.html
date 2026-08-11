@@ -114,7 +114,7 @@
                     </div>
                     <small class="form-text">Or select a pre-configured theme</small>
                 </div>
-                <button type="submit" class="btn" id="generate-team-btn">
+                <button type="submit" class="btn btn-pokemon" id="generate-team-btn">
                     <i class="fas fa-magic"></i> Generate Team
                 </button>
             </form>
@@ -124,7 +124,7 @@
                 <div id="team-container" class="team-grid"></div>
                 <div class="info-grid" id="team-analysis"></div>
                 <div id="save-team-bar" class="d-flex gap-2 justify-content-center mt-3">
-                    <button class="btn btn-sm" onclick="copyShareLink()" style="background:var(--btn-gradient); color:white; border:none; padding:8px 20px; border-radius:25px; font-size:0.9rem;">
+                    <button class="btn btn-sm" onclick="copyShareLink()" style="background:var(--btn-bg); color:white; border:none; padding:8px 20px; border-radius:25px; font-size:0.9rem;">
                         <i class="fas fa-share-alt"></i> Copy Share Link
                     </button>
                     <button class="btn btn-sm" onclick="showSuccess('Team saved to browser!');" style="background:rgba(255,255,255,0.15); color:var(--text-primary); border:1px solid var(--glass-border); padding:8px 20px; border-radius:25px; font-size:0.9rem;" disabled>
@@ -162,7 +162,7 @@
                     <span class="card-title">Optimal Pokemon Build</span>
                 </div>
                 <div id="optimal-build-container">
-                    <button class="btn" onclick="loadOptimalBuild()">
+                    <button class="btn btn-pokemon" onclick="loadOptimalBuild()">
                         <i class="fas fa-cog"></i> Calculate Optimal Build
                     </button>
                 </div>
@@ -173,8 +173,8 @@
                     <span class="card-title">Model Performance</span>
                 </div>
                 <div id="model-performance-container">
-                    <button class="btn" onclick="loadModelPerformance()">
-                        <i class="fas fa-analytics"></i> View Model Stats
+                    <button class="btn btn-pokemon" onclick="loadModelPerformance()">
+                        <i class="fas fa-chart-line"></i> View Model Stats
                     </button>
                 </div>
             </div>
@@ -188,10 +188,10 @@
             <div>
                 <div class="d-flex gap-2 mb-3">
                     <button class="btn btn-sm btn-outline" onclick="loadClustering('pca')" id="viz-pca-btn" style="background:var(--accent-color);color:white;border:none;padding:6px 16px;border-radius:20px;">
-                        <i class="fas fa-chart-scatter"></i> PCA Visualization
+                        <i class="fas fa-circle-nodes"></i> PCA Visualization
                     </button>
                     <button class="btn btn-sm btn-outline" onclick="loadClustering('tsne')" id="viz-tsne-btn" style="background:rgba(255,255,255,0.1);color:var(--text-primary);border:1px solid var(--glass-border);padding:6px 16px;border-radius:20px;">
-                        <i class="fas fa-chart-scatter"></i> t-SNE
+                        <i class="fas fa-circle-nodes"></i> t-SNE
                     </button>
                 </div>
                 <div id="clustering-container">

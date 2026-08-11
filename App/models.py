@@ -74,9 +74,25 @@ class User(db.Model):
         return None
 
     def rename_pokemon(self, poke_id, name):
+        """Rename one of this user's caught Pokemon.
+
+        A blank name is refused rather than stored. It used to be accepted, and
+        the result was silent data loss: the home page's rename input sat
+        outside its <form> with no `form` attribute, so the browser submitted
+        only the CSRF token, `name` arrived as None, this wrote it, committed,
+        and returned True — and the handler flashed "given a new name
+        successfully" over a nickname it had just destroyed. Verified against
+        the database: bob's "Benny" became NULL.
+
+        The markup is fixed too, but this is the half that protects every other
+        caller.
+        """
+        cleaned = (name or "").strip()
+        if not cleaned:
+            return None
         poke = db.session.get(UserPokemon, poke_id)
         if poke and poke.user_id == self.id:
-            poke.name = name
+            poke.name = cleaned
             db.session.add(poke)
             db.session.commit()
             return True

@@ -112,13 +112,13 @@
   --text-muted: var(--color-text-muted);
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-shadow: rgba(0, 0, 0, 0.08);
-  --accent-gradient: #4361E6;   /* T22: white text on it is 5.13:1 */
+  --accent-bg: #4361E6;   /* T22: white text on it is 5.13:1 */
   /* T22: was #667EEA, 3.66:1 on white — failed both as text (.btn-theme,
      .stat-mini-value) and as a background behind white text. Contrast is
      symmetric, so one darker value fixes both uses. */
   --accent-color: #4361E6;      /* 4.56:1 on #EFF1FC, the lightest surface it sits on */
   --color-on-accent: #FFFFFF;   /* 5.13:1 on --accent-color */
-  --btn-gradient: #4361E6;      /* T22: white text on it is 5.13:1 */
+  --btn-bg: #4361E6;      /* T22: white text on it is 5.13:1 */
   --btn-shadow: rgba(102, 126, 234, 0.4);
   --card-accent-border: #F0F0F0;
   --input-bg: var(--color-surface);
@@ -161,12 +161,12 @@
   --bg-card: rgba(25, 25, 50, 0.9);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: rgba(0, 0, 0, 0.3);
-  --accent-gradient: #7C4DFF;
+  --accent-bg: #7C4DFF;
   --accent-color: #9974FF;      /* T22: 4.54:1 on the lightest dark surface */
   /* The dark accent is light, so white on it is only 3.34:1 — it needs dark
      text, which is the opposite of the light theme. Hence the paired token. */
   --color-on-accent: #14141F;   /* 5.48:1 on --accent-color */
-  --btn-gradient: #7C4DFF;
+  --btn-bg: #7C4DFF;
   --btn-shadow: rgba(124, 77, 255, 0.4);
   --card-accent-border: rgba(255, 255, 255, 0.06);
   --input-bg: rgba(30, 30, 60, 0.8);

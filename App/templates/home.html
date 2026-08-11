@@ -1,436 +1,207 @@
 {% extends "layout.html" %}
 {% from "_macros.html" import type_badge %}
 
-{% set type_colors = {
-  "grass": "#78C850", "fire": "#F08030", "water": "#6890F0",
-  "bug": "#A8B820", "normal": "#A8A878", "poison": "#A040A0",
-  "electric": "#F8D030", "ground": "#E0C068", "fairy": "#EE99AC",
-  "fighting": "#C03028", "psychic": "#F85888", "rock": "#B8A038",
-  "ghost": "#705898", "ice": "#98D8D8", "dragon": "#7038F8",
-  "flying": "#A890F0", "steel": "#B8B8D0", "dark": "#705848"
-} %}
-
 {% block title %}Home{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-3">
+{# The trainer hub.
 
+   This page used to be a three-pane dex browser: all 801 Pokemon in a
+   scrolling list, a detail panel, and a collection table. That made it a
+   second, worse copy of /pokemon-area — same list, same search, no generation
+   filter — and it cost 484 KB of HTML and 4,612 DOM nodes on every load, for a
+   page whose real question is "what do I do now?".
+
+   So: status, the Arena, your collection. Browsing is /pokemon-area's job and
+   the single detail view is /pokemon-area/pokemon-details/<id>.
+
+   Styles live in static/css/pages.css, scoped under .trainer-home.
+   Behaviour lives in static/js/home.js. #}
+
+{% block content %}
+<div class="container py-4 trainer-home">
+
+  {# ── Trainer status ───────────────────────────────────────────────
+     The three numbers that decide what a player can do next: how many
+     throws they have, how far along they are, and how big the dex is. #}
+  <section class="trainer-card" aria-labelledby="trainer-heading">
+    <div>
+      <h1 id="trainer-heading" class="trainer-name">{{ current_user.username }}</h1>
+      <p class="trainer-tagline">Gotta catch 'em all.</p>
+    </div>
+    <dl class="trainer-stats">
+      <div class="trainer-stat">
+        <dt>Pokéballs</dt>
+        <dd id="pokeball-value">{{ pokeballs }}</dd>
+      </div>
+      <div class="trainer-stat">
+        <dt>Caught</dt>
+        <dd id="caught-count">{{ usr_pkmons|length }}</dd>
+      </div>
+      <div class="trainer-stat">
+        <dt>Pokédex</dt>
+        <dd>{{ dex_total }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  {# Search delegates rather than filtering a list this page no longer has. #}
+  <form action="/pokemon-area" method="GET" class="home-search" role="search">
+    <label for="home-search-input" class="visually-hidden">Search the Pokédex</label>
+    <div class="input-group">
+      <span class="input-group-text bg-white"><i class="fas fa-search" aria-hidden="true"></i></span>
+      <input type="text" id="home-search-input" name="query" class="form-control"
+             placeholder="Search the Pokédex…">
+      <button type="submit" class="btn btn-danger">Search</button>
+    </div>
+  </form>
+
+  {% if dex_total == 0 %}
+  <div class="alert alert-warning" role="alert">
+    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+    No Pokemon data available yet. Seed the database with <code>flask init</code>.
+  </div>
+  {% endif %}
+
+  {# At zero this is urgent, so it gets an alert. Above zero it is still the
+     only way to earn more, so it stays visible as a quieter line at the foot
+     of the page rather than appearing out of nowhere the moment you run dry. #}
   {% if pokeballs <= 0 %}
-  <div class="alert alert-warning text-center mb-3">
-    <i class="fas fa-exclamation-triangle me-2"></i>
+  <div class="alert alert-warning" role="alert">
+    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
     You're out of Pokeballs!
     <a href="/quiz" class="alert-link">Take the quiz</a> to earn more.
   </div>
   {% endif %}
 
-  <form action="/app" method="GET" class="mb-4">
-    <div class="input-group">
-      <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-      <input type="text" name="query" class="form-control" placeholder="Search Pokémon..." value="{{ request.args.get('query', '') }}"
-             aria-label="Search Pokémon">
-      {% if request.args.get('query') %}
-      <a href="/app" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
-      {% endif %}
+  {# ── The Arena ────────────────────────────────────────────────────
+     Promoted from a 69px empty header in a dead column. It is the only
+     game in the application and it rendered as nothing at all. #}
+  <section class="card arena-card" aria-labelledby="arena-heading">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-bold" id="arena-heading">
+        <i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Pokémon Arena
+      </span>
+      <span class="badge bg-pokemon">Pokeballs: <span id="pokeball-value-arena">{{ pokeballs }}</span></span>
     </div>
-  </form>
+    <div class="card-body">
 
-  <div class="row g-3">
-
-    <!-- Col 1: Pokémon list (image, name, types) -->
-    <div class="col-12 col-lg-3 col-xl-3">
-      <div class="card card-type-accent">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span class="fw-bold"><i class="fas fa-pokeball me-2"></i>Pokémon</span>
-          <span class="badge bg-pokemon">{{ list_of_pokemon|length }}</span>
-        </div>
-        <div class="pokemon-list-scroll">
-          <div class="list-group list-group-flush">
-            {% for p in list_of_pokemon %}
-            <a href="/app/{{ p.pokemon_id }}"
-               class="list-group-item list-group-item-action d-flex align-items-center{% if selected_pokemon_id == p.pokemon_id %} active{% endif %}">
-              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ p.pokemon_id }}.png"
-                   alt="{{ p.name }}" width="40" height="40" loading="lazy" class="me-2">
-              <span>#{{ '%03d' % p.pokedex_number }} {{ p.name }}</span>
-              <span class="ms-auto">
-                {{ type_badge(p.type1, small=true) }}
-                {% if p.type2 %}
-                {{ type_badge(p.type2, small=true, extra='ms-1') }}
-                {% endif %}
-              </span>
-            </a>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Col 2: Wide detail panel (important view) -->
-    <div class="col-12 col-lg-5 col-xl-5">
-      <div class="card card-type-accent">
-        <div class="card-body text-center">
-          {% if pokemon %}
-          <div class="sprite-glow mx-auto mb-3">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ pokemon.pokemon_id }}.png"
-                 alt="{{ pokemon.name }}" style="width: 150px; height: 150px;">
-          </div>
-          {# T22: the raw type colour is 2.06:1 as text on white. The class
-             resolves to the same hue darkened to AA. #}
-          <h4 class="fw-bold type-text-{{ pokemon.type1.lower() }}">
-            {{ pokemon.name }}
-          </h4>
-          <div class="mb-3">
-            {% if pokemon.type1 %}
-            {{ type_badge(pokemon.type1, extra='me-1') }}
-            {% endif %}
-            {% if pokemon.type2 %}
-            {{ type_badge(pokemon.type2) }}
-            {% endif %}
-          </div>
-          <div class="row g-2 mb-3">
-            <div class="col-6"><small class="text-muted">Weight:</small> {{ pokemon.weight }}</div>
-            <div class="col-6"><small class="text-muted">Height:</small> {{ pokemon.height }}</div>
-            <div class="col-12">
-              <small class="text-muted">Abilities:</small>
-              {% if pokemon.abilities is iterable and pokemon.abilities is not string %}
-                {{ pokemon.abilities | join(', ') }}
-              {% else %}
-                {{ pokemon.abilities }}
-              {% endif %}
-            </div>
-          </div>
-          <hr>
-          <div class="text-center">
-            <div class="chart-container" style="position:relative; max-width: 320px; margin: 0 auto;">
-              <canvas id="pokemon-stats-radar" width="280" height="280"></canvas>
-            </div>
-            <div class="d-flex flex-wrap justify-content-center gap-2 mt-1 mb-1">
-              {% set stats_list = [
-                ('HP', pokemon.hp), ('ATK', pokemon.attack), ('DEF', pokemon.defense),
-                ('SATK', pokemon.sp_attack), ('SDEF', pokemon.sp_defense), ('SPD', pokemon.speed)
-              ] %}
-              {% for label, value in stats_list %}
-              <span class="small px-2 py-1 rounded" style="background: {{ type_colors.get(pokemon.type1.lower(), '#C62828') }}18; font-weight:600;">
-                {{ label }} <span class="fw-bold">{{ value }}</span>
-              </span>
-              {% endfor %}
-            </div>
-          </div>
-          <hr>
-          <form action="/pokemon/{{ pokemon.pokemon_id }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <div class="input-group">
-              <input type="text" name="nickname" class="form-control" placeholder="Nickname" required
-                     aria-label="Nickname for {{ pokemon.name }}">
-              <button type="submit" class="btn btn-danger"><i class="fas fa-plus-circle me-1"></i>Capture</button>
-            </div>
-          </form>
-          {% else %}
-          <div class="py-5">
-            <i class="fas fa-paw fa-4x text-muted mb-3"></i>
-            <p class="text-muted fs-5">Select a Pokémon</p>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <!-- Col 3: Your Pokémon + Arena -->
-    <div class="col-12 col-lg-4">
-      <div class="card card-type-accent mb-3">
-        <div class="card-header fw-bold">
-          <i class="fas fa-users me-2"></i>Your Pokémon
-        </div>
-        <div class="card-body p-0">
-          {% if usr_pkmons %}
-          {# T23: without .table-responsive this table never overflowed — it
-             squashed. At 360px Bootstrap shrank the Name column to 61px and the
-             release button to 22px, under the 24px minimum target size. #}
-          <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Pokémon</th>
-                <th>Name</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="user-pokemon-tbody">
-              {% for up in usr_pkmons %}
-              <tr id="user-pokemon-{{ up.id }}">
-                <td class="align-middle">
-                  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ up.pokemon_id }}.png"
-                       alt="{{ up.species }}" width="40" height="40" class="me-2">
-                  {{ up.species }}
-                </td>
-                <td class="align-middle">{{ up.name }}</td>
-                <td class="align-middle">
-                  <div class="d-flex align-items-center gap-1 w-100 pokemon-actions">
-                    <input type="text" name="new_name_{{ up.id }}" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required
-                           aria-label="New name for {{ up.name }}">
-                    <button type="submit" form="rename-{{ up.id }}" class="btn btn-sm btn-outline-secondary px-1" title="Rename" aria-label="Rename {{ up.name }}"><i class="fas fa-pen" aria-hidden="true"></i></button>
-                    <button type="submit" form="release-{{ up.id }}" class="btn btn-sm btn-outline-danger px-1" title="Release" aria-label="Release {{ up.name }}"><i class="fas fa-trash" aria-hidden="true"></i></button>
-                  </div>
-                  <form id="rename-{{ up.id }}" action="/rename-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
-                  <form id="release-{{ up.id }}" action="/release-pokemon/{{ up.id }}" method="POST" class="d-none"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          </div>
-          {% else %}
-          <div class="text-center py-4" id="no-pokemon-msg">
-            <p class="text-muted mb-0"><i class="fas fa-paw"></i> No Pokémon captured yet.</p>
-          </div>
-          {% endif %}
-        </div>
+      <div id="arena-no-encounter" class="arena-idle">
+        <p class="arena-idle-text">Tall grass rustles nearby.</p>
+        <button type="button" class="btn btn-danger btn-lg" onclick="findWildPokemon()">
+          <i class="fas fa-paw me-1" aria-hidden="true"></i>Find a wild Pokémon
+        </button>
       </div>
 
-      <div class="card card-type-accent">
-    <div class="card-header d-flex justify-content-between align-items-center"
-         data-bs-toggle="collapse" data-bs-target="#arenaCollapse"
-         role="button" aria-expanded="false" aria-controls="arenaCollapse">
-      <span class="fw-bold"><i class="fas fa-shield-alt me-2"></i>Pokémon Arena</span>
-      <span class="badge bg-primary" id="pokeball-count">Pokeballs: <span id="pokeball-value">{{ pokeballs }}</span></span>
-    </div>
-    <div id="arenaCollapse" class="collapse">
-      <div class="card-body text-center">
-        <div id="arena-no-encounter">
-          <p class="text-muted">Ready to battle a wild Pokemon?</p>
-          <button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Wild Pokemon!</button>
-        </div>
-        <div id="arena-encounter" style="display:none;">
-          <div class="sprite-glow mx-auto mb-3">
-            <img id="arena-sprite" src="" alt="" style="width: 120px; height: 120px;">
-          </div>
-          <h5 id="arena-name" class="fw-bold"></h5>
-          <div id="arena-types" class="mb-2"></div>
-          <div class="mb-2" style="max-width: 400px; margin: 0 auto;">
-            <div class="d-flex justify-content-between mb-1">
+      {# aria-live: the whole encounter arrives from a fetch. Without it a
+         screen-reader user is told nothing when a Pokemon appears, is hit,
+         or faints. #}
+      <div id="arena-encounter" style="display:none;" aria-live="polite">
+        <div class="arena-stage">
+          <img id="arena-sprite" src="" alt="" class="arena-sprite" width="150" height="150">
+          <h2 id="arena-name" class="fw-bold arena-name"></h2>
+          <div id="arena-types" class="arena-types"></div>
+          <div class="arena-hp">
+            <div class="d-flex justify-content-between">
               <span class="small fw-bold">HP</span>
               <span class="small" id="arena-hp-text"></span>
             </div>
-            <div class="stat-bar" style="height: 24px;">
-              <div id="arena-hp-bar" class="stat-fill bg-success"
-                   style="width: 100%;" role="progressbar"
+            <div class="stat-track">
+              <div id="arena-hp-bar" class="stat-fill" style="width: 100%;" role="progressbar"
+                   aria-label="Wild Pokémon hit points"
                    aria-valuenow="0" aria-valuemin="0" aria-valuemax="0"></div>
             </div>
           </div>
-          <div id="arena-actions" class="d-flex justify-content-center gap-2 mt-3">
-            <button class="btn btn-warning" onclick="attackPokemon()"><i class="fas fa-fist-raised me-1"></i>Attack</button>
-            <button class="btn btn-primary" onclick="catchPokemon()"><i class="fas fa-circle me-1"></i>Throw Pokeball</button>
-            <button class="btn btn-secondary" onclick="runFromPokemon()"><i class="fas fa-running me-1"></i>Run</button>
-          </div>
-          <div id="arena-fainted" style="display:none;" class="mt-3">
-            <p class="text-danger fw-bold">The wild Pokemon fainted!</p>
-            <button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Another</button>
-          </div>
-          <div id="arena-catch-result" style="display:none;" class="mt-3"></div>
         </div>
+
+        {# flex-wrap is load-bearing: three buttons in a nowrap row measured
+           391px against a 360px viewport, and were the only thing making the
+           whole page scroll sideways on a phone. #}
+        <div id="arena-actions" class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+          <button class="btn btn-warning" onclick="attackPokemon()"><i class="fas fa-fist-raised me-1" aria-hidden="true"></i>Attack</button>
+          <button class="btn btn-primary" onclick="catchPokemon()"><i class="fas fa-circle me-1" aria-hidden="true"></i>Throw Pokeball</button>
+          <button class="btn btn-secondary" onclick="runFromPokemon()"><i class="fas fa-running me-1" aria-hidden="true"></i>Run</button>
+        </div>
+
+        <div id="arena-fainted" style="display:none;" class="mt-3">
+          <p class="text-danger fw-bold">The wild Pokemon fainted!</p>
+          <button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1" aria-hidden="true"></i>Find Another</button>
+        </div>
+        <div id="arena-catch-result" style="display:none;" class="mt-3"></div>
       </div>
+
     </div>
-  </div>
+  </section>
+
+  {# ── Collection ───────────────────────────────────────────────────
+     Cards, not a table. The table needed .table-responsive to survive
+     360px, and its rename input plus two buttons still squashed. #}
+  <section class="card collection-card" aria-labelledby="collection-heading">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-bold" id="collection-heading">
+        <i class="fas fa-users me-2" aria-hidden="true"></i>Your Pokémon
+      </span>
+      <span class="badge bg-pokemon" id="collection-count">{{ usr_pkmons|length }}</span>
+    </div>
+    <div class="card-body">
+
+      {# The empty notice and the grid are siblings, and the grid always
+         exists. The old code rebuilt the entire table with innerHTML on the
+         first catch, which is what forced the JS to duplicate every row's
+         markup as a string. Now JS appends one card and toggles `hidden`. #}
+      <p id="no-pokemon-msg" class="collection-empty"{% if usr_pkmons %} hidden{% endif %}>
+        <i class="fas fa-paw me-1" aria-hidden="true"></i>No Pokémon captured yet.
+        Find one in the Arena above.
+      </p>
+
+      <ul id="user-pokemon-grid" class="collection-grid">
+        {% for up in usr_pkmons %}
+        <li class="collection-item" id="user-pokemon-{{ up.id }}">
+          <a href="/pokemon-area/pokemon-details/{{ up.pokemon_id }}" class="collection-link">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{{ up.pokemon_id }}.png"
+                 alt="" width="72" height="72" loading="lazy" class="collection-sprite">
+            <span class="collection-nickname">{{ up.name }}</span>
+            <span class="collection-species">{{ up.species }}</span>
+          </a>
+
+          {# The rename input lives INSIDE its form. It used to sit outside,
+             with no `form` attribute, so `input.form` was null and the browser
+             submitted only the CSRF token — the rename then wrote NULL over
+             the nickname and reported success. #}
+          <form action="/rename-pokemon/{{ up.id }}" method="POST" class="collection-rename">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="rename-input-{{ up.id }}" class="visually-hidden">New name for {{ up.name }}</label>
+            <input type="text" id="rename-input-{{ up.id }}" name="new_name_{{ up.id }}"
+                   class="form-control form-control-sm" placeholder="Rename…" required>
+            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                    title="Rename" aria-label="Rename {{ up.name }}">
+              <i class="fas fa-pen" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <form action="/release-pokemon/{{ up.id }}" method="POST" class="collection-release">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    title="Release" aria-label="Release {{ up.name }}">
+              <i class="fas fa-trash me-1" aria-hidden="true"></i>Release
+            </button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+
+    </div>
+  </section>
+
+  <p class="home-footnote">
+    Low on Pokéballs? <a href="/quiz">Take the quiz</a> to earn more.
+  </p>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-<script>
-{% if pokemon %}
-document.addEventListener("DOMContentLoaded", function () {
-  var accent = "{{ type_colors.get(pokemon.type1.lower(), '#C62828') }}";
-  var ctx = document.getElementById("pokemon-stats-radar").getContext("2d");
-  new Chart(ctx, {
-    type: "radar",
-    data: {
-      labels: ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"],
-      datasets: [{
-        label: "{{ pokemon.name }}",
-        data: [{{ pokemon.hp }}, {{ pokemon.attack }}, {{ pokemon.defense }}, {{ pokemon.sp_attack }}, {{ pokemon.sp_defense }}, {{ pokemon.speed }}],
-        backgroundColor: accent + "30",
-        borderColor: accent,
-        borderWidth: 2,
-        pointBackgroundColor: accent,
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6
-      }, {
-        label: "Max (255)",
-        data: [255, 255, 255, 255, 255, 255],
-        backgroundColor: "rgba(0,0,0,0.02)",
-        borderColor: "rgba(0,0,0,0.15)",
-        borderWidth: 1,
-        borderDash: [4, 4],
-        pointRadius: 0,
-        fill: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      scales: {
-        r: {
-          beginAtZero: true,
-          max: 255,
-          ticks: { stepSize: 50, backdropColor: "transparent", font: { size: 10 } },
-          grid: { color: "rgba(0,0,0,0.08)" },
-          angleLines: { color: "rgba(0,0,0,0.08)" },
-          pointLabels: { font: { size: 12, weight: "bold" } }
-        }
-      },
-      plugins: {
-        legend: { display: false }
-      }
-    }
-  });
-});
-{% endif %}
-</script>
-<script>
-let arenaCurrentHp = 0;
-let arenaMaxHp = 0;
-let arenaPokemonId = null;
-
-async function findWildPokemon() {
-  const resp = await apiFetch("/arena/encounter");
-  const data = await resp.json();
-  if (data.error) { showToast(data.error, "danger"); return; }
-  showEncounter(data);
-}
-
-async function attackPokemon() {
-  if (!arenaPokemonId) return;
-  const resp = await apiFetch("/arena/attack/" + arenaPokemonId, { method: "POST" });
-  const data = await resp.json();
-  if (data.error) { showToast(data.error, "danger"); return; }
-  updateHpBar(data.current_hp, data.max_hp);
-  if (data.fainted) showFainted();
-}
-
-async function catchPokemon() {
-  if (!arenaPokemonId) return;
-  const resp = await apiFetch("/arena/catch/" + arenaPokemonId, { method: "POST" });
-  const data = await resp.json();
-  if (data.error) {
-    if (data.redirect) { window.location.href = data.redirect; return; }
-    showToast(data.error, "danger");
-    return;
-  }
-  document.getElementById("pokeball-value").textContent = data.pokeballs_remaining;
-  if (data.caught) {
-    document.getElementById("arena-actions").style.display = "none";
-    document.getElementById("arena-catch-result").style.display = "block";
-    document.getElementById("arena-catch-result").innerHTML =
-      '<p class="text-success fw-bold fs-5">🎉 You caught ' + data.pokemon_name + '!</p>' +
-      '<button class="btn btn-danger" onclick="findWildPokemon()"><i class="fas fa-paw me-1"></i>Find Another</button>';
-    addPokemonToCollection(data);
-    showToast("Caught " + data.pokemon_name + "!", "success");
-  } else {
-    showToast(data.pokemon_name + " broke free!", "warning");
-  }
-}
-
-async function runFromPokemon() {
-  const resp = await apiFetch("/arena/run", { method: "POST" });
-  const data = await resp.json();
-  if (data.success) {
-    resetArena();
-    showToast("You fled!", "info");
-  }
-}
-
-function showEncounter(data) {
-  arenaPokemonId = data.id;
-  arenaMaxHp = data.max_hp;
-  arenaCurrentHp = data.current_hp;
-
-  document.getElementById("arena-no-encounter").style.display = "none";
-  document.getElementById("arena-encounter").style.display = "block";
-  document.getElementById("arena-fainted").style.display = "none";
-  document.getElementById("arena-catch-result").style.display = "none";
-  document.getElementById("arena-actions").style.display = "flex";
-
-  document.getElementById("arena-sprite").src = data.sprite_url;
-  document.getElementById("arena-name").textContent = data.name + " (#" + data.pokedex_number + ")";
-
-  var typesHtml = '<span class="type-badge type-' + data.type1.toLowerCase() + '">' + data.type1 + "</span>";
-  if (data.type2) {
-    typesHtml += '<span class="type-badge type-' + data.type2.toLowerCase() + ' ms-1">' + data.type2 + "</span>";
-  }
-  document.getElementById("arena-types").innerHTML = typesHtml;
-
-  document.getElementById("pokeball-value").textContent = data.pokeballs;
-  updateHpBar(data.current_hp, data.max_hp);
-}
-
-function updateHpBar(currentHp, maxHp) {
-  arenaCurrentHp = currentHp;
-  var pct = maxHp > 0 ? (currentHp / maxHp * 100) : 0;
-  var bar = document.getElementById("arena-hp-bar");
-  bar.style.width = pct + "%";
-  bar.setAttribute("aria-valuenow", currentHp);
-  bar.setAttribute("aria-valuemax", maxHp);
-  document.getElementById("arena-hp-text").textContent = currentHp + " / " + maxHp;
-
-  bar.className = "stat-fill";
-  if (pct > 50) bar.classList.add("bg-success");
-  else if (pct > 25) bar.classList.add("bg-warning");
-  else bar.classList.add("bg-danger");
-}
-
-function showFainted() {
-  document.getElementById("arena-actions").style.display = "none";
-  document.getElementById("arena-fainted").style.display = "block";
-}
-
-function resetArena() {
-  arenaPokemonId = null;
-  arenaCurrentHp = 0;
-  arenaMaxHp = 0;
-  document.getElementById("arena-no-encounter").style.display = "block";
-  document.getElementById("arena-encounter").style.display = "none";
-}
-
-function addPokemonToCollection(data) {
-  var tbody = document.getElementById("user-pokemon-tbody");
-  var emptyMsg = document.getElementById("no-pokemon-msg");
-
-  if (emptyMsg) {
-    var parent = emptyMsg.parentElement;
-    parent.innerHTML =
-      '<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Pokémon</th><th>Name</th><th>Actions</th></tr></thead><tbody id="user-pokemon-tbody"></tbody></table></div>';
-    tbody = document.getElementById("user-pokemon-tbody");
-  }
-
-  // The nickname is user-supplied, stored, and interpolated into innerHTML
-  // below — in text position and, since T22's aria-labels, in attribute
-  // position too. Attribute context is the dangerous one: an unescaped quote
-  // gets out of the attribute and into an event handler. Escape both.
-  function esc(v) {
-    return String(v == null ? '' : v)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  var spriteUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + data.pokemon_id + ".png";
-  var row = document.createElement("tr");
-  row.id = "user-pokemon-" + data.user_pokemon_id;
-  row.innerHTML =
-    '<td class="align-middle"><img src="' + spriteUrl + '" alt="' + esc(data.species) + '" width="40" height="40" class="me-2">' + esc(data.species) + '</td>' +
-    '<td class="align-middle">' + esc(data.pokemon_name) + '</td>' +
-    '<td class="align-middle">' +
-      '<div class="d-flex align-items-center gap-1 w-100 pokemon-actions">' +
-        '<input type="text" name="new_name_' + data.user_pokemon_id + '" class="form-control form-control-sm flex-grow-1" placeholder="Rename Pokémon..." required aria-label="New name for ' + esc(data.pokemon_name) + '">' +
-        '<button type="submit" form="rename-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-secondary px-1" title="Rename" aria-label="Rename ' + esc(data.pokemon_name) + '"><i class="fas fa-pen" aria-hidden="true"></i></button>' +
-        '<button type="submit" form="release-' + data.user_pokemon_id + '" class="btn btn-sm btn-outline-danger px-1" title="Release" aria-label="Release ' + esc(data.pokemon_name) + '"><i class="fas fa-trash" aria-hidden="true"></i></button>' +
-      '</div>' +
-      '<form id="rename-' + data.user_pokemon_id + '" action="/rename-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none">' +
-      '<input type="hidden" name="csrf_token" value="' + (csrfToken() || '') + '"></form>' +
-      '<form id="release-' + data.user_pokemon_id + '" action="/release-pokemon/' + data.user_pokemon_id + '" method="POST" class="d-none">' +
-      '<input type="hidden" name="csrf_token" value="' + (csrfToken() || '') + '"></form>' +
-    '</td>';
-  tbody.appendChild(row);
-}
-</script>
+{# No JSON island: this page needs no server-rendered data in its script. The
+   CSRF token comes from `csrfToken()` in dashboard.js, which reads the cookie,
+   and everything else arrives in the arena's fetch responses. #}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
 {% endblock %}

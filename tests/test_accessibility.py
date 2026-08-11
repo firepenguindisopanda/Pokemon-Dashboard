@@ -575,3 +575,34 @@ class TestMatchupCellContrast:
         assert re.search(r"label\s*=\s*['\"]", js), (
             "ml_playground.js no longer writes a textual multiplier label"
         )
+
+
+class TestFloatingLabelsAreReadableInBothThemes:
+    """Bootstrap's floating label overlays the input, not the card.
+
+    `.form-floating > label` is `position: absolute` and sits on top of the
+    field, so its contrast is measured against the INPUT's background. In dark
+    mode the input is `rgba(30, 30, 60, 0.8)` while the label kept Bootstrap's
+    light-mode `#212529` — dark text on a dark field, measured at 1.82:1 on
+    both auth screens, which are the first pages anyone sees.
+
+    Nothing in the project had ever set a colour for it, so it inherited a
+    value that only works in one theme. Scoped per page because an unscoped
+    `.form-floating` rule in pages.css reaches all nine.
+    """
+
+    @pytest.mark.parametrize("page", ["login", "signup"])
+    def test_the_label_sets_a_theme_aware_colour(self, page):
+        css = re.sub(r"/\*.*?\*/", "", read("App/static/css/pages.css"), flags=re.S)
+        block = re.search(
+            rf"\.{page}-page \.form-floating > label\s*\{{([^}}]*)\}}", css)
+        assert block, (
+            f"no .{page}-page .form-floating > label rule; the label inherits "
+            f"Bootstrap's light-mode colour and is unreadable in dark mode"
+        )
+        body = block.group(1)
+        assert re.search(r"(?<!-)\bcolor:\s*var\(--", body), (
+            f"the {page} floating label pins a literal colour; it sits on an "
+            f"input whose background genuinely changes with the theme, so it "
+            f"needs a token: {body.strip()}"
+        )

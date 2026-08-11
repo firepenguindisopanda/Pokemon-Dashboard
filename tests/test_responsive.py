@@ -38,6 +38,7 @@ TEMPLATES = Path("App/templates")
 STYLES_CSS = Path("App/static/css/styles.css")
 COMPONENTS_CSS = Path("App/static/css/components.css")
 HOME_JS_TABLE = "user-pokemon-tbody"
+HOME_JS = Path("App/static/js/home.js")
 
 # WCAG 2.2 Target Size (Minimum), 2.5.8. The project's axe run targets 2.1 AA,
 # so this is above the contractual bar — but a 22px control on a phone is the
@@ -74,19 +75,46 @@ class TestNoTableSquashesToFit:
                     f"instead of scrolling"
                 )
 
-    def test_the_js_rebuilt_table_is_wrapped_too(self):
-        """The same table is re-created in JS after a catch.
+    def test_the_collection_is_not_a_table_at_all(self):
+        """The caught-Pokémon table is gone; the homepage redesign made it a grid.
 
-        If only the server-rendered copy is wrapped, the page silently loses
-        the behaviour the moment a user catches their first Pokémon.
+        This test used to assert that the JS-rebuilt copy of that table carried
+        `.table-responsive`, because the server-rendered fix vanished the moment
+        a user caught their first Pokémon and the script replaced the markup.
+
+        A wrapping grid removes the whole category: nothing to squash, nothing
+        to scroll, and no second copy of the markup in JS to keep in step. The
+        assertion is kept — pointed at the property that replaced it — so the
+        table cannot quietly come back.
         """
         html = read(TEMPLATES / "home.html")
-        js_table = re.search(r"'(<[^']*" + HOME_JS_TABLE + r"[^']*)'", html)
-        assert js_table, "could not find the JS-built table in home.html"
-        assert "table-responsive" in js_table.group(1), (
-            "the JS-built table has no .table-responsive wrapper, so the "
-            "server-rendered fix disappears after the first catch: "
-            f"{js_table.group(1)[:120]}"
+        assert "<table" not in html, (
+            "the collection is a table again; at 360px its rename input and "
+            "two buttons squash below the minimum target size"
+        )
+        assert HOME_JS_TABLE not in read(HOME_JS), (
+            f"home.js still rebuilds a {HOME_JS_TABLE} table after a catch"
+        )
+        assert "collection-grid" in html, "no collection grid in home.html"
+
+    def test_the_js_built_collection_card_matches_the_template(self):
+        """The JS copy of a collection card must keep the template's fixes.
+
+        This is the same trap the old table had: markup exists twice, once in
+        Jinja and once as a JS string, and only one gets fixed. The rename
+        input being *inside* its form is the fix that matters here — outside
+        it, the browser submits no name and the server writes NULL over the
+        nickname.
+        """
+        js = read(HOME_JS)
+        card = re.search(r"item\.innerHTML\s*=(.*?);\n", js, re.S)
+        assert card, "could not find the JS-built collection card in home.js"
+        markup = card.group(1)
+        form_at = markup.find("collection-rename")
+        input_at = markup.find("new_name_")
+        assert form_at != -1 and input_at > form_at, (
+            "the JS-built rename input is not inside its form, so a card added "
+            "after a catch reproduces the nickname-wiping bug"
         )
 
 

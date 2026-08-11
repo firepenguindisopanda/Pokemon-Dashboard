@@ -51,31 +51,13 @@
 
 .login-page {
   flex: 1;
-  background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+  background: #C62828;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   position: relative;
   overflow: hidden;
-}
-
-.login-page::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
-  animation: login-glow 8s ease-in-out infinite alternate;
-  z-index: 1;
-}
-
-@keyframes login-glow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-5%, -5%); }
 }
 
 .login-page .login-card {
@@ -88,7 +70,7 @@
 .login-page .login-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #C62828, #E53935);
+  background: #C62828;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -122,6 +104,18 @@
   line-height: 1;
 }
 
+/* Bootstrap's floating label is absolutely positioned OVER the input, so it is
+   read against the input's background, not the card's. In dark mode the input
+   is rgba(30,30,60,0.8) and the label kept Bootstrap's light-mode #212529 —
+   dark on dark, measured at 1.82:1. Nothing in this project ever set a colour
+   for it, so it inherited a value that only works in one theme.
+
+   Duplicated for login and signup rather than shared, because an unscoped
+   `.form-floating` rule here would reach all nine pages. */
+.login-page .form-floating > label {
+  color: var(--text-primary);     /* 17.06:1 light, 6.55:1 dark */
+}
+
 .login-page .password-toggle:hover {
   color: #C62828;
 }
@@ -131,31 +125,13 @@
 
 .signup-page {
   flex: 1;
-  background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
+  background: #C62828;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   position: relative;
   overflow: hidden;
-}
-
-.signup-page::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
-  animation: signup-glow 8s ease-in-out infinite alternate;
-  z-index: 1;
-}
-
-@keyframes signup-glow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-5%, -5%); }
 }
 
 .signup-page .signup-card {
@@ -168,7 +144,7 @@
 .signup-page .signup-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #C62828, #E53935);
+  background: #C62828;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -199,6 +175,18 @@
   line-height: 1;
 }
 
+/* Bootstrap's floating label is absolutely positioned OVER the input, so it is
+   read against the input's background, not the card's. In dark mode the input
+   is rgba(30,30,60,0.8) and the label kept Bootstrap's light-mode #212529 —
+   dark on dark, measured at 1.82:1. Nothing in this project ever set a colour
+   for it, so it inherited a value that only works in one theme.
+
+   Duplicated for login and signup rather than shared, because an unscoped
+   `.form-floating` rule here would reach all nine pages. */
+.signup-page .form-floating > label {
+  color: var(--text-primary);     /* 17.06:1 light, 6.55:1 dark */
+}
+
 .signup-page .password-toggle:hover {
   color: #C62828;
 }
@@ -208,12 +196,264 @@
 }
 
 
+/* ── /app  (home.html) — the trainer hub ──────────────────────────
+   Replaced a three-column dex browser whose right column ran ~900px
+   of empty space under a 69px arena card. Everything here is a single
+   column that reflows, so there is no dead space to leave behind. */
+
+.trainer-home .trainer-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: 14px;
+  background: #A32020;
+  color: #fff;
+}
+
+.trainer-home .trainer-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.trainer-home .trainer-tagline {
+  margin: 0;
+  font-size: 0.9rem;
+  /* Not rgba white: a translucent white over the red lands around 3:1.
+     Pinned and measured against the solid behind it. */
+  color: #F2DADA;                 /* 5.68:1 on #A32020 */
+}
+
+.trainer-home .trainer-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  margin: 0;
+}
+
+.trainer-home .trainer-stat dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: #F2DADA;
+}
+
+.trainer-home .trainer-stat dd {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.trainer-home .home-search {
+  margin-bottom: 1.25rem;
+}
+
+.trainer-home .card {
+  margin-bottom: 1.25rem;
+}
+
+.trainer-home .arena-idle {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.trainer-home .arena-idle-text {
+  color: #5C5C5C;                 /* 6.9:1 on the white card */
+  margin-bottom: 1rem;
+}
+
+.trainer-home .arena-stage {
+  text-align: center;
+}
+
+.trainer-home .arena-sprite {
+  image-rendering: pixelated;
+}
+
+.trainer-home .arena-name {
+  font-size: 1.3rem;
+  margin: 0.5rem 0;
+}
+
+.trainer-home .arena-types {
+  margin-bottom: 1rem;
+}
+
+.trainer-home .arena-hp {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Cards, not a table. The table needed .table-responsive at 360px and its
+   rename input still squashed; auto-fill lets these reflow instead. */
+.trainer-home .collection-grid {
+  display: grid;
+  /* 190px, not 150: at 150 the rename input measured 65px wide, which is the
+     same squashing the old table was replaced for. */
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.9rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.trainer-home .collection-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid #E3E3E3;
+  border-radius: 12px;
+  background: #FAFAFA;
+  text-align: center;
+}
+
+.trainer-home .collection-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.trainer-home .collection-link:hover .collection-nickname,
+.trainer-home .collection-link:focus-visible .collection-nickname {
+  text-decoration: underline;
+}
+
+.trainer-home .collection-sprite {
+  image-rendering: pixelated;
+}
+
+.trainer-home .collection-nickname {
+  font-weight: 700;
+  color: #212529;                 /* 15.3:1 on #FAFAFA */
+  overflow-wrap: anywhere;
+}
+
+.trainer-home .collection-species {
+  font-size: 0.8rem;
+  color: #5C5C5C;                 /* 6.0:1 on #FAFAFA */
+}
+
+.trainer-home .collection-rename {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.trainer-home .collection-rename input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The release button is full width; the rename pair shares a row. Both keep
+   a 24px minimum target, which the old squashed table lost at 360px. */
+.trainer-home .collection-rename .btn,
+.trainer-home .collection-release .btn {
+  min-width: 32px;
+  min-height: 32px;
+  flex: 0 0 auto;
+}
+
+.trainer-home .collection-release .btn {
+  width: 100%;
+}
+
+/* Restating what Bootstrap should already provide.
+
+   styles.css:412 declares a bare `.btn { background: var(--btn-gradient);
+   color: white; border: none; }`. It loads after Bootstrap and sits at the
+   same specificity as `.btn-danger` / `.btn-outline-secondary`, so it wins on
+   order and EVERY button variant on the site renders as the same blue
+   gradient. Here that put "Release" and "Rename" side by side looking
+   identical, which is the one place a destructive action must not.
+
+   Scoped to this page on purpose: the collision is real and site-wide, but
+   correcting it globally restyles the buttons on all nine pages, and that is
+   a visual decision rather than part of this redesign. */
+.trainer-home .collection-rename .btn {
+  background: #FFFFFF;
+  color: #495057;                 /* 8.18:1 on white */
+  border: 1px solid #767676;      /* 4.54:1 — 1.4.11 wants 3:1 for borders */
+}
+
+.trainer-home .collection-release .btn {
+  background: #FFFFFF;
+  color: #A32020;                 /* 7.54:1 on white */
+  border: 1px solid #A32020;
+}
+
+.trainer-home .collection-rename .btn:hover {
+  background: #F1F3F5;
+}
+
+.trainer-home .collection-release .btn:hover {
+  background: #A32020;
+  color: #FFFFFF;                 /* 7.54:1, inverted */
+}
+
+/* The one element on this page that sits on the BODY, not on a white card —
+   so it is the one that must use a theme token rather than a pinned colour.
+   The inverse of the .ability-chip trap: pinning #5C5C5C here measured 6.13:1
+   in light and 2.73:1 in dark, because the ground underneath it really does
+   change. --text-primary is 15.65:1 and 14.16:1 respectively.
+
+   The link takes the same colour and keeps its underline: the underline is
+   what marks it as a link, so colour does not have to carry that job and
+   cannot fail contrast doing it. */
+.trainer-home .home-footnote {
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.trainer-home .home-footnote a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.trainer-home .collection-empty {
+  text-align: center;
+  color: #5C5C5C;
+  margin: 0;
+  padding: 1.5rem 0;
+}
+
+
 /* ── /pokemon-area  (pokemon_area.html) ───────────────────────── */
 
 .pokemon-area-page {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Pagination replaced an 801-card single page (1,005 KB of HTML). The pager
+   sits below the scrolling card region, so it must not scroll away with it. */
+/* --text-primary, not a pinned grey: like .home-footnote this sits on the
+   themed page background rather than on a white card, so the ground under it
+   really does change. #5C5C5C measured 6.13:1 in light and 2.73:1 in dark.
+   I made this exact mistake twice in one sitting; the tell is "is this on a
+   .bg-white card, or on the body?". */
+.pokemon-area-page .pager-summary {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0.75rem 0 0.25rem;
+}
+
+.pokemon-area-page .pagination {
+  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 .pokemon-area-page .pokemon-area-filters {
@@ -228,13 +468,20 @@
 
 
 /* ── /pokemon-area/pokemon-details/<id>  (pokemon_area_details.html) ──
-   The header gradient is per-Pokémon, so it cannot be a static rule. The
-   template sets --detail-accent-strong / --detail-accent-soft inline on
-   the element; only the varying part stays in the markup. */
+   The header colour is per-Pokémon, so it cannot be a static rule. The
+   template sets --detail-accent inline; only the varying part is markup.
+
+   That variable is now the AA-DARKENED type token, not the raw type colour.
+   The header was `linear-gradient(accent+dd, accent+88)` under white text,
+   which is readable on fire (#F08030) and unreadable on electric (#F8D030)
+   at 1.66:1. No sweep ever caught it, because it needs a light-typed
+   Pokémon on screen to exist. `--type-<name>-text` is that hue darkened
+   until it clears 4.5:1 against white, and contrast is symmetric, so the
+   same value as a BACKGROUND carries white text at the same ratio — every
+   type, no per-type special cases. */
 
 .pokemon-detail-page .detail-header {
-  background: linear-gradient(135deg,
-              var(--detail-accent-strong), var(--detail-accent-soft));
+  background: var(--detail-accent);
   position: relative;
   overflow: hidden;
 }
@@ -271,6 +518,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The Legendary badge was white on #F9A825 — 1.63:1, with a text-shadow
+   standing in for contrast. Invisible to every sweep because it only renders
+   for a legendary Pokemon, and the audits all used Charizard.
+
+   Dark text on the same gold, which is the T22 badge rule: the background is
+   the recognisable thing, so the text moves. */
+.pokemon-detail-page .type-badge-lg--legendary {
+  background: #F9A825;
+  color: #212529;                 /* 7.83:1 */
+  text-shadow: none;
 }
 
 .pokemon-detail-page .info-card {

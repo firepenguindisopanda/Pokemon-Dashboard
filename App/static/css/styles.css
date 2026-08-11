@@ -409,13 +409,57 @@ body {
 .form-control:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 
+/* ── Buttons ──────────────────────────────────────────────────────────
+   GEOMETRY ONLY. This rule used to also set `background`, `color` and
+   `border`, and that was a site-wide bug: `.btn` and `.btn-danger` are
+   both a single class, and this stylesheet loads AFTER Bootstrap, so the
+   bare rule won on source order and every variant on all nine pages
+   rendered as the same blue. "Release" was indistinguishable from
+   "Rename"; a red-branded site had a blue primary button.
+
+   Anything painted below is painted deliberately. A `.btn` with no
+   variant now has no colour of its own — use `.btn-pokemon`. */
 .btn {
-    background: var(--btn-gradient); color: white; border: none; padding: 12px 30px;
+    padding: 12px 30px;
     border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;
     transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px;
 }
 .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--btn-shadow); }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* The house palette. Solid fills only — no gradients anywhere — and every
+   pair is measured against white or #212529, whichever it uses. The ratios
+   are asserted in tests/test_solid_colours.py, not just written here.
+
+   Bootstrap 5.3's own defaults do pass AA, between 4.50:1 and 4.69:1. These
+   are chosen for margin and for brand: #0D6EFD is not this application's
+   blue, and 4.50:1 is one rounding away from failing. */
+.btn-pokemon,
+.btn-primary   { background: #4361E6; color: #FFFFFF; border: 1px solid #4361E6; }  /* 5.13:1 */
+.btn-danger    { background: #A32020; color: #FFFFFF; border: 1px solid #A32020; }  /* 7.54:1 */
+.btn-success   { background: #146C43; color: #FFFFFF; border: 1px solid #146C43; }  /* 6.45:1 */
+.btn-secondary { background: #5A6169; color: #FFFFFF; border: 1px solid #5A6169; }  /* 6.27:1 */
+.btn-warning   { background: #F9A825; color: #212529; border: 1px solid #F9A825; }  /* 7.83:1 */
+.btn-info      { background: #0C7A8C; color: #FFFFFF; border: 1px solid #0C7A8C; }  /* 5.03:1 */
+
+.btn-pokemon:hover,
+.btn-primary:hover   { background: #3550C4; border-color: #3550C4; }
+.btn-danger:hover    { background: #871A1A; border-color: #871A1A; }
+.btn-success:hover   { background: #0F5533; border-color: #0F5533; }
+.btn-secondary:hover { background: #474D53; border-color: #474D53; }
+.btn-warning:hover   { background: #E09415; border-color: #E09415; }
+.btn-info:hover      { background: #09616F; border-color: #09616F; }
+
+/* Outline variants. Bootstrap's own are transparent-on-transparent once the
+   bare `.btn` stops painting, so they are restated here rather than left to
+   whichever rule happens to win. Borders clear 3:1 for WCAG 1.4.11. */
+.btn-outline-secondary { background: #FFFFFF; color: #495057; border: 1px solid #767676; }
+.btn-outline-danger    { background: #FFFFFF; color: #A32020; border: 1px solid #A32020; }
+.btn-outline-light     { background: transparent; color: #FFFFFF; border: 1px solid #FFFFFF; }
+
+.btn-outline-secondary:hover { background: #F1F3F5; }
+.btn-outline-danger:hover    { background: #A32020; color: #FFFFFF; }
+.btn-outline-light:hover     { background: rgba(255, 255, 255, 0.15); }
 
 .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; margin-top: 30px; }
 

@@ -12,6 +12,15 @@
 
 {% block title %}Pokémon Area{% endblock %}
 
+{# Every page link carries the active filters. Dropping them is the classic
+   pagination bug: page 2 of a generation-1 search quietly becomes page 2 of
+   everything. `or None` matters — url_for keeps an empty string as `?query=`,
+   which then looks like a filter that is set. #}
+{% macro page_url(number) -%}
+{{- url_for('pokemon.pokemon_area', page=number,
+             query=query or None, generation=selected_generation or None) -}}
+{%- endmacro %}
+
 {# Styles live in static/css/pages.css, scoped under .pokemon-area-page. #}
 
 {% block content %}
@@ -21,10 +30,21 @@
   <div class="pokemon-area-filters mb-3">
     <div class="row g-2 align-items-center">
       <div class="col-12 col-md-4">
-        <form action="/search" method="GET">
+        {# Posts to /pokemon-area, not /search. `/search` was a third browse
+           surface rendering this same template with half its context — no
+           generation list, no pagination — so searching silently dropped both.
+           It now redirects here. #}
+        <form action="/pokemon-area" method="GET">
+          {# Carries the generation filter through a search. The old pair of
+             forms could not: each submitted only its own field, so using one
+             cleared the other. #}
+          {% if selected_generation %}
+          <input type="hidden" name="generation" value="{{ selected_generation }}">
+          {% endif %}
           <div class="input-group">
             <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
             <input type="text" name="query" class="form-control" placeholder="Pokémon name, number or type"
+               value="{{ query or '' }}"
                aria-label="Search Pokémon by name, number or type">
             <button type="submit" class="btn btn-danger">Search</button>
           </div>
@@ -33,7 +53,11 @@
       <div class="col-12 col-md-8">
         <form action="/pokemon-area" method="GET" id="filter-form">
           <input type="hidden" name="generation" id="generation-input"
-                 value="{{ selected_generation }}">
+                 value="{{ selected_generation or '' }}">
+          {# And the reverse: changing generation keeps the search term. #}
+          {% if query %}
+          <input type="hidden" name="query" value="{{ query }}">
+          {% endif %}
           <div class="d-flex flex-wrap gap-2">
             <span class="filter-pill{% if not selected_generation %} active{% endif %}"
                   data-gen="">All</span>
@@ -66,6 +90,47 @@
     </div>
     {% endif %}
   </div>
+
+  {% if pagination and pagination.pages > 1 %}
+  <p class="pager-summary" aria-live="polite">
+    Showing {{ pagination.first }}–{{ pagination.last }} of {{ pagination.total }}
+  </p>
+  <nav aria-label="Pokédex pages">
+    <ul class="pagination justify-content-center flex-wrap">
+      {# Disabled steps render as <span>, not a greyed <a>. A disabled anchor
+         still takes focus, so a keyboard user tabs onto a control that does
+         nothing. #}
+      <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ page_url(pagination.prev_num) }}" rel="prev">Previous</a>
+        {% else %}
+        <span class="page-link">Previous</span>
+        {% endif %}
+      </li>
+      {% for number in pagination.iter_pages() %}
+        {% if number %}
+        <li class="page-item{% if number == pagination.page %} active{% endif %}">
+          {% if number == pagination.page %}
+          <span class="page-link" aria-current="page">{{ number }}<span class="visually-hidden"> (current page)</span></span>
+          {% else %}
+          <a class="page-link" href="{{ page_url(number) }}"
+             aria-label="Page {{ number }}">{{ number }}</a>
+          {% endif %}
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item{% if not pagination.has_next %} disabled{% endif %}">
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ page_url(pagination.next_num) }}" rel="next">Next</a>
+        {% else %}
+        <span class="page-link">Next</span>
+        {% endif %}
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
 
 </div>
 {% endblock %}

@@ -37,17 +37,22 @@ PAGES_CSS = STATIC / "css/pages.css"
 ML_JS = STATIC / "js/ml_playground.js"
 DASHBOARD_CHARTS_JS = STATIC / "js/dashboard_charts.js"
 PIECHART_JS = STATIC / "js/piechart.js"
+HOME_JS = STATIC / "js/home.js"
 
 # The acceptance criterion is "no template holds >~20 lines of inline CSS".
 MAX_INLINE_CSS_LINES = 20
 
-# Templates whose inline <script> bodies T21 extracts. home.html (168 lines),
-# signup.html (105) and quiz.html (65) also carry inline JS, but they are not
-# in this task's scope and are deliberately left alone.
+# Templates whose inline <script> bodies T21 extracts. signup.html (105 lines)
+# and quiz.html (65) also carry inline JS and are still out of scope.
+#
+# home.html was on that deferred list at 168 lines. The homepage redesign
+# rewrote the template anyway, so finishing the extraction was free — its 201
+# lines of arena and collection logic are now static/js/home.js.
 DE_INLINED_TEMPLATES = [
     "pokemon_ml.html",
     "pokemon_dashboard.html",
     "pokemon_piechart.html",
+    "home.html",
 ]
 
 
@@ -152,6 +157,7 @@ class TestTemplatesAreDeInlined:
             (ML_JS, "pokemon_ml.html"),
             (DASHBOARD_CHARTS_JS, "pokemon_dashboard.html"),
             (PIECHART_JS, "pokemon_piechart.html"),
+            (HOME_JS, "home.html"),
         ],
     )
     def test_each_extracted_script_exists_and_is_loaded(self, script, template):
@@ -225,6 +231,9 @@ class TestPageStylesCannotLeak:
         # is what makes "is this rule scoped?" answerable, and a page that
         # silently added itself would defeat the check.
         ".chat-page",
+        # The home page had no root at all while it was a three-pane dex
+        # browser with no styles of its own to scope. The trainer hub has both.
+        ".trainer-home",
     }
 
     # Selectors that are deliberately not page-scoped, with the reason.
