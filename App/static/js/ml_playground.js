@@ -209,15 +209,19 @@ async function fetchTypeMatchup(team) {
         html += '<strong>Resistances:</strong> <span class="text-success">' + (data.resistances.length || 0) + '</span> | ';
         html += '<strong>Immune:</strong> <span class="text-secondary">' + (data.immunity_count || 0) + '</span> | ';
         html += '<strong>Coverage Score:</strong> ' + Math.round(data.coverage_score * 100) + '%</span></div>';
-        html += '<div class="matchup-grid-wrapper"><table class="matchup-table">';
+        // tabindex=0: this scrolls horizontally at narrow widths, and axe's
+        // `scrollable-region-focusable` is right that a mouse-only scroller
+        // hides its overflow from keyboard users entirely.
+        html += '<div class="matchup-grid-wrapper" tabindex="0" role="region" '
+             + 'aria-label="Type defence matrix"><table class="matchup-table">';
         html += '<thead><tr><th></th>';
         allTypes.forEach(function(t) {
-            html += '<th class="type-label" style="background:' + (typeColors[t] || '#888') + '">' + t.substring(0,3) + '</th>';
+            html += '<th class="type-label type-' + t + '">' + t.substring(0,3) + '</th>';
         });
         html += '</tr></thead><tbody>';
         var defenses = data.worst_case || {};
         allTypes.forEach(function(attType) {
-            html += '<tr><td class="type-label" style="background:' + (typeColors[attType] || '#888') + '">' + attType + '</td>';
+            html += '<tr><td class="type-label type-' + attType + '">' + attType + '</td>';
             allTypes.forEach(function(defType) {
                 var mult = defenses[defType] || 1.0;
                 var cellClass = 'neutral';

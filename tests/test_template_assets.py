@@ -221,6 +221,10 @@ class TestPageStylesCannotLeak:
         ".pokemon-area-page",
         ".pokemon-detail-page",
         ".piechart-page",
+        # T26. Registering a new root is deliberately a manual step: this list
+        # is what makes "is this rule scoped?" answerable, and a page that
+        # silently added itself would defeat the check.
+        ".chat-page",
     }
 
     # Selectors that are deliberately not page-scoped, with the reason.

@@ -172,10 +172,30 @@ class Pokemon(db.Model):
 
 
 class Message(db.Model):
+    # Every read filters by room and orders by time, so the composite index is
+    # what keeps a join cheap as the table grows. Without it each join is a
+    # full scan plus a sort over *all* rooms' history, not just this room's.
+    __table_args__ = (
+        db.Index("ix_message_room_timestamp", "room", "timestamp"),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     room = db.Column(db.String(100), nullable=False)
     text = db.Column(db.Text, nullable=False)
+    # Database-side default. NEVER order by this column alone — `id` is the
+    # tie-break that makes "oldest first" well-defined. Both backends produce
+    # ties, for different reasons, and both were measured:
+    #
+    #   SQLite    CURRENT_TIMESTAMP is whole seconds, so a burst of separately
+    #             committed messages shares one value (6 inserts -> 1 stamp).
+    #   Postgres  now() is the TRANSACTION start time, not the clock, so rows
+    #             written in one transaction share a value however fast the
+    #             clock is (8 inserts in 1 txn -> 1 stamp). Production commits
+    #             per message, which does give distinct microsecond stamps
+    #             (measured 6/6) — but batch writes and imports would not.
+    #
+    # Neither backend guarantees an order for ties, so this is load-bearing.
     timestamp = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 
     def __repr__(self):

@@ -144,7 +144,14 @@ class TestTypeBadgeContrast:
     # Classes worn *alongside* a `.type-<name>` class. Anything here that sets
     # its own `color` sits at the same specificity as the per-type rule and, in
     # this file, below it — so it wins and silently overrides all 18.
-    BADGE_SHELL_CLASSES = [".type-badge", ".type-badge-sm", ".cp-type-badge"]
+    BADGE_SHELL_CLASSES = [
+        ".type-badge",
+        ".type-badge-sm",
+        ".cp-type-badge",
+        # T26: found by an audit that finally reached the 18x18 matchup
+        # matrix, which only renders after a team is generated.
+        ".matchup-table .type-label",
+    ]
 
     @pytest.mark.parametrize("shell", BADGE_SHELL_CLASSES)
     def test_badge_shell_classes_do_not_set_colour(self, shell):
@@ -178,9 +185,16 @@ class TestTypeBadgeContrast:
         dark. The class carries a checked pair, an inline background does not.
         """
         js = read("App/static/js/ml_playground.js")
-        offenders = re.findall(r'class=\\?"[^"\']*type-badge[^"\']*\\?"\s*style=', js)
+        # Covers the matchup-matrix cells too, not just badges: those carry the
+        # same `color: white` over an inline type colour and were missed by the
+        # original T22 sweep because the 18x18 table only renders after a team
+        # is generated.
+        offenders = re.findall(
+            r'class=\\?"[^"\']*type-(?:badge|label)[^"\']*\\?"\s*style=', js
+        )
         assert not offenders, (
-            f"a script builds a badge with an inline background: {offenders}"
+            "a script builds a type-coloured element with an inline background, "
+            f"so its text colour is whatever it inherits: {offenders}"
         )
 
     def test_badges_have_no_dark_text_shadow(self):

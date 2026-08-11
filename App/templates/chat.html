@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import section_header %}
+
+{% block title %}Trainer Chat{% endblock %}
+
+{# Styles live in static/css/pages.css, scoped under .chat-page. #}
+
+{% block content %}
+<div class="container py-4 chat-page">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-9 col-xl-8">
+
+      {{ section_header('Trainer Chat', icon='fa-comments', level='h1',
+                        classes='fw-bold mb-3 chat-title') }}
+
+      <div class="chat-shell">
+
+        <div class="chat-toolbar">
+          <label for="room-select" class="chat-toolbar-label">Room</label>
+          <select id="room-select" class="form-select form-select-sm chat-room-select">
+            {% for room in rooms %}
+            <option value="{{ room }}">#{{ room }}</option>
+            {% endfor %}
+          </select>
+          {# Connection state is the one thing a user cannot infer: an idle
+             room and a dropped socket look identical. #}
+          <span id="connection-status" class="chat-status" role="status"
+                aria-live="polite">Connecting…</span>
+        </div>
+
+        {# role=log announces messages that arrive with no page change, and
+           `polite` rather than `assertive` so an incoming message does not
+           interrupt what is being read.
+
+           The role sits on a WRAPPER, not on the <ol>. Putting it directly on
+           the list replaces its implicit `list` role, which orphans every <li>
+           — axe reports `listitem`, 5 nodes, "parent element has a role that
+           is not role=list". This keeps both: a live region and a real list. #}
+        <div class="chat-log-wrapper" role="log" aria-live="polite"
+             aria-label="Chat messages">
+          <ol id="message-list" class="chat-log"></ol>
+        </div>
+
+        <form id="composer" class="chat-composer" autocomplete="off">
+          <label for="message-input" class="visually-hidden">Message</label>
+          <input type="text" id="message-input" class="form-control"
+                 maxlength="500" placeholder="Write a message…"
+                 aria-describedby="char-counter">
+          {# aria-live=polite, not assertive: this updates on every keystroke,
+             and an assertive counter would interrupt a screen reader on each
+             character typed. #}
+          <span id="char-counter" class="chat-counter" aria-live="polite">0/500</span>
+          <button type="submit" class="btn btn-danger chat-send">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+            <span class="chat-send-label">Send</span>
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{# Server-rendered context. The viewer's identity comes from here rather than
+   from anything the browser could set, so "my own message" cannot be faked. #}
+<script id="chat-page-data" type="application/json">{{ page_data | tojson }}</script>
+{# The client library must load BEFORE chat.js — `io` is undefined otherwise.
+   Same ordering bug T21 fixed on /pokemon-piechart. Version 4.x speaks the
+   Socket.IO v5 protocol that python-socketio 5.13 serves. #}
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

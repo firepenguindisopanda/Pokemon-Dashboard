@@ -1,16 +1,15 @@
 """T18 — row selection and aggregation belong in the database, not in Python.
 
-Two hot paths hydrated the entire 801-row Pokemon table to produce a single
-value:
+`quiz.generate_question()` called `random.choice(Pokemon.query.all())` to pick
+one row, hydrating the entire 801-row Pokemon table to produce a single value.
 
-* `quiz.generate_question()` called `random.choice(Pokemon.query.all())` to pick
-  one row.
-* `analytics.get_combined_type_distribution()` loaded every row to compute a
-  count that `GROUP BY` produces directly.
+The risk in fixing it is a silent behaviour change — a different distribution
+of quiz subjects. These tests pin the observable behaviour first and the query
+shape second.
 
-The risk in fixing either is a silent behaviour change — a different
-distribution of quiz subjects, or different chart labels/ordering. These tests
-pin the observable behaviour first and the query shape second.
+T18 also pushed the analytics type-distribution helper into a `GROUP BY`, and
+those tests lived here too. Both the helper and its tests were deleted after
+T21 removed `/pokemon-stats-v1`, its only caller.
 """
 
 import random
@@ -19,7 +18,6 @@ import pytest
 from sqlalchemy import event
 
 from App.app import app as flask_app, db
-from App.blueprints.analytics import get_combined_type_distribution
 from App.blueprints.quiz import generate_question
 from App.models import Pokemon
 
@@ -130,79 +128,3 @@ def reference_type_distribution():
         for type_ in types:
             counts[type_] = counts.get(type_, 0) + 1
     return counts
-
-
-class TestTypeDistributionIsAggregatedInSql:
-    def test_counts_match_the_reference_implementation(self, auth_client):
-        with flask_app.app_context():
-            expected = reference_type_distribution()
-            actual = get_combined_type_distribution()
-
-        assert actual == expected
-
-    def test_label_ordering_matches_the_reference_implementation(self, auth_client):
-        """The chart builds its labels from `.keys()`, so order is output."""
-        with flask_app.app_context():
-            expected = list(reference_type_distribution().keys())
-            actual = list(get_combined_type_distribution().keys())
-
-        assert actual == expected
-
-    def test_an_empty_string_second_type_is_not_counted(self, auth_client):
-        """`if pkmn.type2:` skipped "" as well as NULL; SQL must do the same.
-
-        The seed data has 384 NULLs and no empty strings, so without this row
-        the two are indistinguishable and a `IS NOT NULL` filter would look
-        correct while quietly counting "" as a type.
-        """
-        with flask_app.app_context():
-            db.session.add(
-                Pokemon(
-                    name="Emptytype",
-                    pokedex_number=9999,
-                    type1="fire",
-                    type2="",
-                    hp=1, attack=1, defense=1,
-                    sp_attack=1, sp_defense=1, speed=1,
-                    generation=1,
-                    classification="Test Pokemon",
-                    is_legendary=0,
-                )
-            )
-            db.session.commit()
-
-            distribution = get_combined_type_distribution()
-            expected = reference_type_distribution()
-
-        assert "" not in distribution
-        assert distribution == expected
-
-    def test_the_chart_payload_the_route_builds_is_unchanged(self, auth_client):
-        """The acceptance criterion is about chart data, so assert on that.
-
-        `/pokemon-stats-v1` is the only consumer and it returns 500 before it
-        renders (a known, separate defect), so the endpoint capture cannot
-        prove this change is behaviour-preserving. Rebuilding the payload the
-        way the route does is what actually covers it.
-        """
-        from App.blueprints.analytics import TYPE_COLORS
-
-        with flask_app.app_context():
-            expected = reference_type_distribution()
-            actual = get_combined_type_distribution()
-
-        assert list(actual.keys()) == list(expected.keys())
-        assert list(actual.values()) == list(expected.values())
-        assert [TYPE_COLORS.get(t, "#FFFFFF") for t in actual] == [
-            TYPE_COLORS.get(t, "#FFFFFF") for t in expected
-        ]
-
-    def test_distribution_does_not_hydrate_the_whole_table(self, auth_client):
-        with flask_app.app_context():
-            with SqlRecorder() as sql:
-                get_combined_type_distribution()
-
-        assert sql.full_entity_scans == [], (
-            "type distribution still loads every Pokemon row to count types:\n  "
-            + "\n  ".join(sql.full_entity_scans)
-        )

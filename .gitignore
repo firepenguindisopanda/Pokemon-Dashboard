@@ -33,6 +33,5 @@ App/data.db
 App/models_cache/*.joblib
 App/models_cache/manifest.json
 
-# Browser-automation artifacts from MCP-driven verification
 .playwright-mcp/
 tasks/

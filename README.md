@@ -44,8 +44,17 @@ flask db upgrade
 
 ```bash
 flask run                       # development, port 8080
-gunicorn wsgi:app               # production
+
+# Production. The worker class is NOT optional: gunicorn's default sync worker
+# cannot hold a WebSocket open, and chat needs one. --threads is the ceiling on
+# concurrent chat users, because a held socket occupies its thread for the
+# whole connection. render.yaml carries the measurements behind both numbers.
+gunicorn --worker-class gthread --threads 64 --timeout 120 wsgi:app
 ```
+
+Chat lives at `/chat`. It needs no extra services with a single worker;
+`REDIS_URL` additionally enables a cross-worker message queue, though running
+more than one worker also requires sticky sessions — see `render.yaml`.
 
 ## Testing
 

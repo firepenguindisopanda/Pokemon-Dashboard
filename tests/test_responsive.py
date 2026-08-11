@@ -240,6 +240,22 @@ class TestResponsivePrimitivesSurvive:
             "the 18x18 type matrix lost its horizontal scroller"
         )
 
+    def test_the_scrollable_matrix_is_keyboard_reachable(self):
+        """A scroller nobody can focus hides its overflow from keyboard users.
+
+        axe reports `scrollable-region-focusable`. Found late, because the
+        matrix only renders after a team is generated — so an audit of the
+        page at rest never sees it.
+        """
+        js = read("App/static/js/ml_playground.js")
+        wrapper = re.search(r"matchup-grid-wrapper[^']*'", js)
+        assert wrapper, "the matchup wrapper is no longer built in JS"
+        window = js[max(0, wrapper.start() - 200):wrapper.end() + 200]
+        assert 'tabindex="0"' in window, (
+            "the horizontally-scrolling type matrix is not focusable, so a "
+            "keyboard user cannot scroll it"
+        )
+
     def test_the_viewport_meta_allows_zoom(self):
         """`user-scalable=no` / `maximum-scale=1` block pinch-zoom.
 

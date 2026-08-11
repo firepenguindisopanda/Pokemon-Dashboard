@@ -30,6 +30,8 @@ from App.blueprints.pokemon import pokemon_bp
 from App.blueprints.analytics import analytics_bp
 from App.blueprints.arena import arena_bp
 from App.blueprints.quiz import quiz_bp
+from App.blueprints.chat import chat_bp
+from App.sockets import init_socketio
 
 MinimalUser = namedtuple("MinimalUser", ["id", "username", "email"])
 
@@ -296,6 +298,17 @@ def create_app():
     app.register_blueprint(analytics_bp)
     app.register_blueprint(arena_bp)
     app.register_blueprint(quiz_bp)
+    app.register_blueprint(chat_bp)
+
+    # ── Real-time (Workstream B) ──
+    # Installs WSGI middleware on app.wsgi_app, so nothing new appears in
+    # url_map and `gunicorn wsgi:app` remains the correct target. Deliberately
+    # last: the middleware wraps whatever the factory has already built.
+    #
+    # async_mode is "threading" — no monkey patching, so every HTTP path above
+    # is executed exactly as it was before chat existed. See App/sockets.py for
+    # the measurements behind that choice.
+    init_socketio(app, settings)
 
     logger.info(f"App configured with DB: {settings.sqlalchemy_database_uri[:50]}...")
     logger.info(f"Debug mode: {settings.debug}")

@@ -84,6 +84,12 @@
      and clears 3:1 against both the page and card surfaces. */
   --color-focus-ring: #8E1F1F;
 
+  /* Status text on a themed card surface (T26). NOT --type-*-text: those are
+     computed against white only, and reusing one here measured 3.80:1 on the
+     dark card. */
+  --color-status-ok: #2E7D32;     /* 5.13:1 on the light card */
+  --color-status-error: #C62828;  /* 5.62:1 on the light card */
+
   /* ── Motion ── */
   --motion-fast: 0.15s ease;
   --motion-base: 0.3s ease;
@@ -144,6 +150,8 @@
   --shadow-focus: 0 0 0 3px rgba(249, 168, 37, 0.5);
   /* Amber on the near-black surface; red would disappear. */
   --color-focus-ring: #FFC44D;
+  --color-status-ok: #37963C;     /* 4.61:1 on the dark card */
+  --color-status-error: #DD5555;  /* 4.54:1 on the dark card */
 
   /* Legacy alias — the layout's <body> background reads this directly. */
   --pokemon-bg: var(--color-bg);

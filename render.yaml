@@ -36,10 +36,67 @@ services:
     # requires a paid instance type.
     buildCommand: "pip install -r requirements.txt && flask db upgrade && (flask train || echo 'training deferred to first request')"
 
-    # Default sync worker, one process. Workstream B (chat) must change this to
-    # `gunicorn --worker-class eventlet wsgi:app` — the sync worker cannot hold
-    # WebSocket connections.
-    startCommand: "gunicorn wsgi:app"
+    # T24 (chat). The sync worker cannot hold a WebSocket open, so it had to
+    # change — but NOT to eventlet, which is what this file used to say.
+    #
+    # eventlet 0.41.1 still runs on 3.12, but it now emits an official
+    # deprecation warning telling you not to use it for new projects, and both
+    # eventlet and gevent need `monkey_patch()` before any other import. Once
+    # patched, psycopg2 blocks the whole worker unless psycogreen is added too:
+    # measured against live Neon, a 2s query let a 100ms ticker fire once
+    # instead of 25 times. One slow query would stall every HTTP request and
+    # every WebSocket heartbeat on this single instance.
+    #
+    # gthread gives each connection its own thread and needs no patching at
+    # all, so every existing route keeps the exact code path it has today.
+    # Flask-SocketIO runs in async_mode="threading" and serves real WebSockets
+    # through simple-websocket. The trade is scale: threads, so tens of
+    # concurrent sockets rather than thousands. Far above this app's traffic.
+    #
+    # --threads is the ceiling on concurrent chat users, and it is not a
+    # comfort setting. A held WebSocket occupies its thread for the whole
+    # connection, so usable sockets ~= threads minus in-flight HTTP.
+    #
+    # Measured against this exact command on a seeded database:
+    #   --threads 8   8 sockets starve the worker completely — GET /app times
+    #                 out after 10s and a 9th socket cannot connect at all
+    #   --threads 64  40 sockets held open, GET /app still 200 in ~40ms,
+    #                 worker RSS 222MB -> 226MB
+    #
+    # Thread stacks are virtual, so the memory cost of the higher number is
+    # about 4MB, not 8MB per thread. 64 is chosen for headroom on Render's
+    # 512MB free tier, where ~222MB of the baseline is the ML model set.
+    #
+    # If concurrent users ever approach ~50, this design is the wrong one and
+    # the answer is a greenlet worker, not a bigger number here.
+    #
+    # ── WHY ONE WORKER, even though T27 added a Redis message queue ──
+    #
+    # The queue makes cross-worker broadcasting *correct* — measured: with two
+    # workers and no queue only 4 of 6 clients received a broadcast; with the
+    # queue, 6 of 6. It is configured and ready. Two things still argue for a
+    # single worker here:
+    #
+    #   MEMORY   two workers measured 468MB against this plan's 512MB limit
+    #            (222MB each, mostly the ML model set, plus a 25MB master).
+    #            91% utilisation with no headroom for a request spike.
+    #
+    #   STICKY   Socket.IO needs sticky sessions for >1 worker, and a message
+    #            queue does NOT provide them. Engine.IO sessions live in one
+    #            worker's memory, so the polling handshake and its follow-up
+    #            polls must reach the same process. Measured with 2 workers and
+    #            the queue enabled: a browser flapped continuously, every
+    #            polling request returning "400 BAD REQUEST" (session ID
+    #            unknown). Render's free tier offers no sticky routing.
+    #
+    # So: keep -w 1 here. Scaling up needs a paid instance for the memory AND
+    # either sticky sessions or a websocket-only transport policy on the client
+    # (which forgoes the polling fallback). The queue means that scaling is a
+    # config change rather than a rewrite.
+    #
+    # Still `wsgi:app` — Socket.IO installs WSGI middleware on app.wsgi_app
+    # rather than a URL rule, so there is no separate entry point to target.
+    startCommand: "gunicorn --worker-class gthread --threads 64 --timeout 120 wsgi:app"
 
     # `/` is the login page and requires no authentication.
     healthCheckPath: /
@@ -62,6 +119,12 @@ services:
         sync: false
       # Native rediss:// URL, NOT the Upstash REST URL/token.
       # Required with DEBUG=false; sessions must not fall back to cookies.
+      #
+      # Since T27 this also backs the Socket.IO message queue, on the channel
+      # `pokemon-dashboard:socketio`. The namespace is not cosmetic: this
+      # Upstash instance is shared with another application (104 of its 105
+      # keys are not ours) and python-socketio's default channel is the
+      # generic "socketio".
       - key: REDIS_URL
         sync: false
 

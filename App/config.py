@@ -103,6 +103,13 @@ class Settings(BaseSettings):
     # different, HTTP-based API and will not work here.
     redis_url: Optional[str] = None
     session_key_prefix: str = "pokemon-dashboard:session:"
+    # Socket.IO pub/sub channel for the cross-worker message queue.
+    # NOT python-socketio's default ("socketio"): the Upstash instance is
+    # shared with another application — 104 of its 105 keys belong to
+    # something else — and a generic channel name is how two apps end up
+    # delivering each other's broadcasts. Same reason T13 namespaced the
+    # rate-limiter keys.
+    socketio_channel: str = "pokemon-dashboard:socketio"
 
     # ── Rate limiting ──
     # Applies to the authentication endpoints only. Generous enough that a

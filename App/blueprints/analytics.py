@@ -3,7 +3,7 @@
 import logging
 import threading
 from functools import wraps
-from flask import Blueprint, request, render_template, jsonify
+from flask import Blueprint, current_app, request, render_template, jsonify
 from flask_jwt_extended import jwt_required
 from App.models import db, Pokemon
 from App.lib import PokemonAnalytics, PokemonAnalyticsError
@@ -208,40 +208,6 @@ def with_analytics(f):
 
 
 # ── Helper ──
-
-
-def get_combined_type_distribution():
-    """Count type occurrences across both type1 and type2 columns.
-
-    A `GROUP BY` over the two type columns unioned together, rather than
-    hydrating all 801 rows to do the counting in Python.
-
-    Two details are load-bearing:
-
-    * The old code tested `if pkmn.type2:`, which skipped an empty string as
-      well as NULL. `IS NOT NULL` alone would start counting "" as a type.
-    * The caller builds its chart labels from `.keys()`, so key order is part
-      of the output. The old dict came out in order of first appearance while
-      scanning by id, type1 before type2 — reproduced here by ordering on the
-      smallest `ordinal`, which interleaves the two columns exactly that way.
-    """
-    primary = db.session.query(
-        Pokemon.type1.label("type_name"),
-        (Pokemon.id * 2).label("ordinal"),
-    )
-    secondary = db.session.query(
-        Pokemon.type2.label("type_name"),
-        (Pokemon.id * 2 + 1).label("ordinal"),
-    ).filter(Pokemon.type2.isnot(None), Pokemon.type2 != "")
-
-    both = primary.union_all(secondary).subquery()
-    rows = (
-        db.session.query(both.c.type_name, db.func.count().label("count"))
-        .group_by(both.c.type_name)
-        .order_by(db.func.min(both.c.ordinal))
-        .all()
-    )
-    return {row.type_name: row.count for row in rows}
 
 
 # ── Analytics API Routes ──
@@ -499,10 +465,57 @@ def pokemon_ml_playground():
     return render_template("pokemon_ml.html", type_colors=TYPE_COLORS)
 
 
+def start_analytics_in_background():
+    """Kick off training without making the caller wait for it.
+
+    Issue 6: `/status` was the one analytics route without `@with_analytics`,
+    so the frontend's `waitForAnalytics()` polled it forever and nothing in
+    that loop ever triggered the lazy training that would end the wait. On a
+    cold worker both the dashboard and the ML playground hung indefinitely.
+
+    Decorating `/status` with `@with_analytics` would also end the wait — by
+    blocking the poll for a full training run (~28s measured in T15), which
+    defeats the point of an asynchronous status contract. Starting the work and
+    answering immediately is what the frontend already expects: the next poll
+    sees `initializing`, then `ready`.
+
+    The thread is a **daemon**. T15 deleted a non-daemon training thread
+    because it kept the process alive after `flask init` finished and hung
+    focused pytest runs after the summary line.
+
+    Returns:
+        True if this call started a run; False when one was unnecessary —
+        already ready, already running, or auto-initialisation disabled.
+    """
+    if state.ready or not get_settings().analytics_auto_initialize:
+        return False
+
+    # ensure_analytics() holds state.lock for the whole run, so a non-blocking
+    # acquire is an accurate "is one already in flight?" test. Without it, two
+    # open pages polling every 2s would fork a training thread per poll.
+    if not state.lock.acquire(blocking=False):
+        return False
+    state.lock.release()
+
+    app = current_app._get_current_object()
+
+    def _train():
+        with app.app_context():
+            ensure_analytics()
+
+    threading.Thread(target=_train, name="analytics-bootstrap", daemon=True).start()
+    return True
+
+
 @analytics_bp.route("/api/pokemon-analytics/status", methods=["GET"])
 @jwt_required()
 def analytics_status():
-    """Return analytics initialization status for frontend polling."""
+    """Report readiness, and start training if nothing else has.
+
+    Answers immediately in every case. The payload shape is the contract T16
+    pinned and must not change casually.
+    """
+    start_analytics_in_background()
     return jsonify(state.as_status())
 
 
@@ -512,11 +525,11 @@ def analytics_status():
 # does read — so every request 500'd with "Object of type Undefined is not JSON
 # serializable". Nothing linked to it and `/pokemon-stats` supersedes it.
 #
-# It was the only caller of get_combined_type_distribution() below, which is
-# now unreferenced. The helper is kept for the moment rather than deleted with
-# the route: T18 rewrote it as a UNION ALL and verified it against live Neon,
-# and tests/test_sql_pushdown.py mutation-tested it. Deleting proven, covered
-# code is a separate call for the maintainer to make.
+# Its only callee, get_combined_type_distribution(), went with it in a later
+# ruling: T18's UNION ALL rewrite was Neon-verified and mutation-tested, but a
+# helper with no callers is the "config that exists and does nothing" pattern
+# this project keeps finding. The quiz half of tests/test_sql_pushdown.py
+# stays — that pushdown still has a live caller.
 
 
 @analytics_bp.route("/pokemon-piechart", methods=["GET"])

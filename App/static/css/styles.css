@@ -489,7 +489,12 @@ select.form-control option:checked { background-color: var(--accent-color); colo
 .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .filter-chip { padding: 6px 16px; border-radius: 4px; border: 1px solid var(--glass-border); background: var(--bg-card); color: var(--text-primary); cursor: pointer; transition: all 0.2s ease; font-size: 0.85rem; }
 .filter-chip:hover { border-color: var(--accent-color); color: var(--accent-color); }
-.filter-chip.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+/* T26: `color: white` on the accent is 3.33:1 in dark, where the accent is
+   light. Same paired-token fix T22 applied to .tab-button and .btn-theme —
+   this one was missed because the chip only renders once the dashboard has
+   loaded its data, and the audit had been running against a page still
+   showing its loading state. */
+.filter-chip.active { background: var(--accent-color); color: var(--color-on-accent); border-color: var(--accent-color); }
 
 /* Skeleton Loading */
 .skeleton-card { background: var(--bg-card); border-radius: 4px; padding: 20px; border: 1px solid var(--glass-border); }
@@ -504,7 +509,11 @@ select.form-control option:checked { background-color: var(--accent-color); colo
 .matchup-grid-wrapper { overflow-x: auto; margin-top: 15px; }
 .matchup-table { border-collapse: collapse; font-size: 0.7rem; width: 100%; }
 .matchup-table th, .matchup-table td { padding: 4px 6px; text-align: center; border: 1px solid var(--glass-border); }
-.matchup-table .type-label { font-weight: 600; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); font-size: 0.65rem; white-space: nowrap; }
+/* T26: `color: white` here was 3.38:1 over the lighter type colours. The
+   cells now carry a .type-<name> class, which brings the AA-checked text
+   colour with it, so this rule sets everything EXCEPT colour — the same
+   split T22 made for .type-badge and .cp-type-badge. */
+.matchup-table .type-label { font-weight: 600; font-size: 0.65rem; white-space: nowrap; }
 .matchup-cell.immune { background: #424242; color: #fff; }
 .matchup-cell.resist-4x { background: #1b5e20; color: #fff; }
 .matchup-cell.resist-2x { background: #4caf50; color: #fff; }
