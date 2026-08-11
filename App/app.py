@@ -121,6 +121,15 @@ def create_app():
     # readable by the client. Game state lives in the session (quiz answers,
     # arena HP), so it must be stored server-side rather than handed to the
     # player. `Settings` refuses to start in production without REDIS_URL.
+    # The Flask session cookie is NOT covered by JWT_COOKIE_SECURE — that only
+    # governs the JWT cookies. Flask's own default is Secure=False, so on the
+    # live deploy the session cookie came back as `HttpOnly; Path=/` with no
+    # Secure flag while every JWT cookie had one. Reuse the same setting: if
+    # the JWT cookies require HTTPS, so must this one.
+    app.config["SESSION_COOKIE_SECURE"] = settings.jwt_cookie_secure
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
     if settings.redis_url:
         app.config["SESSION_TYPE"] = "redis"
         app.config["SESSION_REDIS"] = redis.from_url(settings.redis_url)

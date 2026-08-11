@@ -34,6 +34,25 @@ def filter_pokemon_by_generation(generation):
 # ── Routes ──
 
 
+
+def _back(default="pokemon.home_page"):
+    """Where to send the browser after a form action.
+
+    NOT bare `request.referrer`. It is None whenever no Referer header is sent,
+    and `redirect(None)` emits `Location: None` — a relative path literally
+    named "None" — so the browser fetches /None and gets a 404 for an action
+    that actually succeeded. Found on the live deploy: a capture returned 404
+    while the Pokemon was caught, and retrying then said "You already captured
+    this Pokemon!".
+
+    Browsers usually do send Referer on a same-origin form POST, which is why
+    this survived: every existing test passes `headers={'Referer': '/'}`. But
+    `Referrer-Policy: no-referrer`, privacy extensions and some proxies strip
+    it, and none of those are unusual.
+    """
+    return request.referrer or url_for(default)
+
+
 @pokemon_bp.route("/search", methods=["GET"])
 @jwt_required()
 def search_pokemon():
@@ -143,7 +162,7 @@ def capture_action(pokemon_id):
         current_user.catch_pokemon(pokemon_id, nickname)
         flash("Successfully captured the Pokemon!")
 
-    return redirect(request.referrer)
+    return redirect(_back())
 
 
 @pokemon_bp.route("/rename-pokemon/<int:pokemon_id>", methods=["POST"])
@@ -162,7 +181,7 @@ def rename_action(pokemon_id):
             "Error renaming your Pokemon. Please check the name and try again."
         )
 
-    return redirect(request.referrer)
+    return redirect(_back())
 
 
 @pokemon_bp.route("/release-pokemon/<int:user_pokemon_id>", methods=["POST"])
@@ -180,4 +199,4 @@ def release_action(user_pokemon_id):
     else:
         flash("Error: Pokemon not found.")
 
-    return redirect(request.referrer)
+    return redirect(_back())

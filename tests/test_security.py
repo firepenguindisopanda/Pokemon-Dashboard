@@ -491,3 +491,37 @@ class TestSeedingStillAvailableToOperators:
         import wsgi  # noqa: F401 — registers the CLI command on import
 
         assert 'init' in app.cli.commands, "the `flask init` CLI command is missing"
+
+
+class TestSessionCookieIsHardened:
+    """Found on the live deploy: the session cookie had no Secure flag.
+
+    Every JWT cookie came back `Secure; HttpOnly` because JWT_COOKIE_SECURE was
+    set — but that setting governs only the JWT cookies. Flask's own session
+    cookie has a separate config key whose default is False, so it was being
+    sent without Secure on an HTTPS-only site. It carries the opaque
+    server-side session id (quiz answers, arena state live behind it).
+    """
+
+    def test_session_cookie_secure_follows_the_jwt_setting(self):
+        from App.app import app
+
+        assert app.config.get("SESSION_COOKIE_SECURE") == app.config.get(
+            "JWT_COOKIE_SECURE"
+        ), (
+            "SESSION_COOKIE_SECURE does not track JWT_COOKIE_SECURE; the "
+            "session cookie can be sent over plain HTTP while the JWT cookies "
+            "cannot"
+        )
+
+    def test_session_cookie_is_http_only(self):
+        from App.app import app
+
+        assert app.config.get("SESSION_COOKIE_HTTPONLY") is True
+
+    def test_session_cookie_has_samesite(self):
+        """Defence in depth alongside the CSRF tokens from T12."""
+        from App.app import app
+
+        assert app.config.get("SESSION_COOKIE_SAMESITE") in ("Lax", "Strict")
+
