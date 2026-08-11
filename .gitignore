@@ -8,7 +8,12 @@
 env/
 venv/
 .venv/
-env*
+# NOT `env*`: that pattern has no slash, so git matches it against every
+# basename at any depth — which silently excluded `migrations/env.py`.
+# Alembic cannot run without that file, so `flask db upgrade` failed on
+# every fresh checkout while working perfectly for anyone who already had
+# it on disk. Caught by the first real Render deploy. The three directory
+# entries above already cover virtualenvs.
 dist/
 build/
 *.egg

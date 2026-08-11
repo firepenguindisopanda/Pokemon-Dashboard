@@ -6,6 +6,7 @@ only surfaces on the production database. These tests build a database purely
 from migrations and compare it against the models.
 """
 
+import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from flask_migrate import upgrade
@@ -171,3 +172,84 @@ class TestPagesSurviveAnUnseededDatabase:
         with flask_app.app_context():
             clear_seed_data()
             initialize_db()
+
+
+class TestMigrationsSurviveAFreshCheckout:
+    """Every file Alembic needs must actually be committed.
+
+    `migrations/env.py` was ignored by a `.gitignore` line reading `env*`. A
+    pattern with no slash is matched against the *basename* at any depth, so it
+    silently excluded that file from the repository while leaving it on every
+    developer's disk. Local runs were fine; `flask db upgrade` failed on every
+    fresh checkout with `ImportError: Can't find Python file migrations/env.py`.
+
+    It survived from T8 until the first real Render deploy, because nothing
+    before that ever built from a clean clone. The whole deploy story depends
+    on that command working, so this checks the tree rather than the disk.
+    """
+
+    def _tracked(self):
+        import subprocess
+
+        out = subprocess.run(
+            ["git", "ls-files", "migrations"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        return set(out.split())
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "migrations/env.py",        # the one that was missing
+            "migrations/alembic.ini",
+            "migrations/script.py.mako",
+        ],
+    )
+    def test_alembic_scaffolding_is_committed(self, path):
+        assert path in self._tracked(), (
+            f"{path} is not tracked by git. It exists on disk, so everything "
+            f"works here — and `flask db upgrade` fails on a fresh checkout, "
+            f"which is what every deploy is. Check .gitignore for a pattern "
+            f"matching its basename."
+        )
+
+    def test_every_migration_version_is_committed(self):
+        """A revision that exists locally but is not committed is worse.
+
+        The deploy would run an older head and the schema would silently drift
+        from the models.
+        """
+        from pathlib import Path
+
+        tracked = self._tracked()
+        on_disk = {
+            str(p) for p in Path("migrations/versions").glob("*.py")
+            if "__pycache__" not in str(p)
+        }
+        missing = sorted(p for p in on_disk if p not in tracked)
+        assert not missing, f"migration files present but never committed: {missing}"
+
+    def test_nothing_in_migrations_is_gitignored(self):
+        """Catches the next *new* file a bad pattern would swallow.
+
+        Note what this cannot do: once a file is tracked, git stops applying
+        .gitignore to it, so `check-ignore` reports nothing even with the
+        offending pattern restored. That case is covered by the tracked-file
+        test above instead. Both were mutation-checked — un-tracking env.py
+        fails that one, and adding a new ignored file here fails this one.
+        """
+        import subprocess
+        from pathlib import Path
+
+        candidates = [
+            str(p) for p in Path("migrations").rglob("*")
+            if p.is_file() and "__pycache__" not in str(p)
+        ]
+        result = subprocess.run(
+            ["git", "check-ignore"] + candidates,
+            capture_output=True, text=True,
+        )
+        ignored = [line for line in result.stdout.split() if line]
+        assert not ignored, (
+            f".gitignore excludes files Alembic needs: {ignored}"
+        )
