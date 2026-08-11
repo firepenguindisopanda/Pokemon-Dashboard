@@ -306,6 +306,75 @@
   color: #5C5C5C;                 /* 6.0:1 on #fafafa */
 }
 
+/* ── Type matchup grid ────────────────────────────────────────────
+   A wrapping grid rather than the 18-column table used on /pokemon-ml.
+   That table needs a horizontal scroller at 375px, and a scroller then
+   needs tabindex to stay keyboard-reachable (T23). Eighteen tiles that
+   reflow need neither: three columns at 375px, six on a wide panel.
+
+   Severity colours come from .matchup-cell in styles.css, so this page
+   and /pokemon-ml cannot drift apart. Only geometry lives here. */
+.pokemon-detail-page .matchup-intro {
+  color: #5C5C5C;                 /* 6.9:1 on #FFFFFF */
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.pokemon-detail-page .matchup-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.pokemon-detail-page .matchup-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  text-align: center;
+}
+
+/* .matchup-cell is a <td> on /pokemon-ml and a <span> here, so it needs to be
+   made block-level before its padding and radius mean anything. */
+.pokemon-detail-page .matchup-cell {
+  display: block;
+  padding: 6px 0;
+  border-radius: 6px 6px 0 0;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.pokemon-detail-page .matchup-tile-type {
+  display: block;
+  border-radius: 0 0 6px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 3px 0;
+  margin: 0;
+}
+
+.pokemon-detail-page .matchup-summary {
+  color: #212529;
+  font-size: 0.88rem;
+  margin-bottom: 1.5rem;
+}
+
+.pokemon-detail-page .matchup-summary-item {
+  display: block;
+  text-transform: capitalize;
+  margin-bottom: 2px;
+}
+
+/* The strong labels stay sentence-case; only the type names capitalise. */
+.pokemon-detail-page .matchup-summary-item strong {
+  text-transform: none;
+}
+
 
 /* ── /pokemon-piechart  (pokemon_piechart.html) ───────────────────
    Only .chart-container survived the move. The page's other four inline

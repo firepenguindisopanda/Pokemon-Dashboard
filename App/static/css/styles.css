@@ -514,12 +514,30 @@ select.form-control option:checked { background-color: var(--accent-color); colo
    colour with it, so this rule sets everything EXCEPT colour — the same
    split T22 made for .type-badge and .cp-type-badge. */
 .matchup-table .type-label { font-weight: 600; font-size: 0.65rem; white-space: nowrap; }
-.matchup-cell.immune { background: #424242; color: #fff; }
-.matchup-cell.resist-4x { background: #1b5e20; color: #fff; }
-.matchup-cell.resist-2x { background: #4caf50; color: #fff; }
-.matchup-cell.neutral { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.matchup-cell.weak-2x { background: #e65100; color: #fff; }
-.matchup-cell.weak-4x { background: #b71c1c; color: #fff; }
+/* Severity palette. Ratios measured against #FFFFFF, not estimated.
+
+   Two of these used to fail AA and neither sweep caught it: the grid on
+   /pokemon-ml only appears once a team is generated, so ten axe runs never
+   loaded a single cell. `resist-2x` was #4CAF50 at 2.78:1 and `weak-2x` was
+   #E65100 at 3.79:1 — the two most common cells in any matrix.
+
+   Darkening the background is the right fix HERE, where T22 forbade it for
+   type badges: those backgrounds are the franchise's identity and are pinned
+   to App/constants.py by a test. These five are invented severity indicators
+   that mean nothing outside this grid. Flipping to dark text was tried first
+   and does not work — #212529 on #E65100 is 4.07:1, still short.
+
+   Colour is never the only signal; every cell also carries its multiplier as
+   text (x4, x2, x1, 1/2, 1/4, x0). */
+.matchup-cell.immune { background: #424242; color: #fff; }      /* 10.05:1 */
+.matchup-cell.resist-4x { background: #1B5E20; color: #fff; }   /*  7.87:1 */
+.matchup-cell.resist-2x { background: #2E7D32; color: #fff; }   /*  5.13:1 */
+/* Explicit pair, not var(--text-primary) over a translucent white: the details
+   page card is #FFFFFF in BOTH themes, so the token resolved to near-white
+   text on a near-white cell in dark mode — the .ability-chip defect again. */
+.matchup-cell.neutral { background: #F1F3F5; color: #212529; }  /* 13.87:1 */
+.matchup-cell.weak-2x { background: #C04400; color: #fff; }     /*  5.16:1 */
+.matchup-cell.weak-4x { background: #B71C1C; color: #fff; }     /*  6.57:1 */
 
 /* Prediction Playground */
 .playground-stat-label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }

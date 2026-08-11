@@ -17,6 +17,7 @@ from App.ml_utils import (
     load_latest_model,
     load_scalers_and_encoders,
 )
+from App.type_chart import ALL_TYPES, defensive_multipliers, normalise_type
 
 warnings.filterwarnings('ignore')
 logger = logging.getLogger(__name__)
@@ -1276,7 +1277,19 @@ class PokemonAnalytics:
 
     def calculate_team_type_coverage(self, team_names):
         """
-        Calculate type defense coverage for a team using against_* data.
+        Calculate type defense coverage for a team from its members' types.
+
+        Derived from type1/type2 rather than read from `against_*` columns.
+        Those columns exist in pokemon.csv but NOT on the `Pokemon` model, and
+        `initialize_pokemon_analytics()` builds the production dataframe from
+        the model — so the old lookup missed every column and substituted a
+        neutral 1.0 for all 18. Every deployed team came back with zero
+        weaknesses, zero resistances and a 0% coverage score, with a 200.
+
+        The whole test suite passed throughout, because its fixtures load the
+        CSV and the CSV has the columns. Deriving removes the divergence: dev
+        and production now compute from the same two fields.
+
         Args:
             team_names (list[str]): Pokemon names in the team.
         Returns:
@@ -1285,38 +1298,46 @@ class PokemonAnalytics:
         if self.cleaned_data is None:
             raise DataNotCleanedError("Data must be cleaned first using clean_data()")
 
-        against_cols = [
-            'against_bug', 'against_dark', 'against_dragon', 'against_electric',
-            'against_fairy', 'against_fight', 'against_fire', 'against_flying',
-            'against_ghost', 'against_grass', 'against_ground', 'against_ice',
-            'against_normal', 'against_poison', 'against_psychic', 'against_rock',
-            'against_steel', 'against_water',
-        ]
-        type_names = [col.replace('against_', '') for col in against_cols]
-        # Fix naming: 'fight' -> 'fighting'
-        type_names = ['fighting' if t == 'fight' else t for t in type_names]
-
         df = self.cleaned_data
         team_df = df[df['name'].isin(team_names)]
         if team_df.empty:
             return {'error': 'No Pokemon found in team list'}
 
-        # Worst-case defense: each attacking type hits the weakest member
-        worst_case = {}
-        for col, tname in zip(against_cols, type_names):
-            if col in team_df.columns:
-                worst_case[tname] = float(team_df[col].max())
-            else:
-                worst_case[tname] = 1.0
+        # Worst-case defense: each attacking type hits the weakest member.
+        # Seeded at 0.0 rather than 1.0 so an all-immune team reports the
+        # immunity instead of being floored at neutral.
+        #
+        # Iterated in the caller's order, not the dataframe's: these become the
+        # rows of a grid, and rows that reshuffle between loads cannot be read.
+        by_name = {row['name']: row for _, row in team_df.iterrows()}
+        worst_case = {t: 0.0 for t in ALL_TYPES}
+        members = []
+        for name in team_names:
+            row = by_name.get(name)
+            if row is None:
+                continue
+            multipliers = defensive_multipliers(row.get('type1'), row.get('type2'))
+            for attacker, value in multipliers.items():
+                worst_case[attacker] = max(worst_case[attacker], value)
+            # Per-member multipliers are what makes the grid a matrix. Without
+            # them a renderer has only the 18 worst-case numbers, which is
+            # exactly why /pokemon-ml drew the same row eighteen times.
+            members.append({
+                'name': name,
+                'type1': normalise_type(row.get('type1')),
+                'type2': normalise_type(row.get('type2')),
+                'multipliers': multipliers,
+            })
 
         weaknesses = [t for t, v in worst_case.items() if v > 1.0]
         resistances = [t for t, v in worst_case.items() if v < 1.0 and v > 0.0]
         immunities = [t for t, v in worst_case.items() if v == 0.0]
 
-        coverage_score = len(resistances) / max(len(type_names), 1)
+        coverage_score = len(resistances) / len(ALL_TYPES)
 
         return {
             'worst_case': worst_case,
+            'members': members,
             'weaknesses': sorted(weaknesses),
             'resistances': sorted(resistances),
             'immunities': sorted(immunities),

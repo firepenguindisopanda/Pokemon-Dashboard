@@ -494,3 +494,84 @@ class TestDarkThemeIsReadable:
             ".ability-chip sets a light background but no text colour, so in "
             "dark mode it inherits near-white text and disappears"
         )
+
+
+class TestMatchupCellContrast:
+    """The severity palette, which the 40/40 sweep never saw.
+
+    Same blind spot as the 27 nodes T26 turned up: the matchup grid on
+    /pokemon-ml only renders after a team is generated, so axe walked that page
+    ten times without ever encountering a single cell. Measured by hand:
+
+        immune     #FFF on #424242  10.05:1  ok
+        resist-4x  #FFF on #1B5E20   7.87:1  ok
+        resist-2x  #FFF on #4CAF50   2.78:1  FAIL
+        weak-2x    #FFF on #E65100   3.79:1  FAIL
+        weak-4x    #FFF on #B71C1C   6.57:1  ok
+
+    The two failures are the two most common cells in any matrix. They are now
+    reachable by the sweep, because the Pokemon details page renders the same
+    classes server-side on every load.
+
+    Unlike the type badges, these backgrounds carry no franchise identity —
+    they are invented severity indicators — so darkening them is allowed here
+    where `test_background_colours_are_unchanged` forbids it for badges.
+    """
+
+    SEVERITY_CLASSES = ["immune", "resist-4x", "resist-2x", "weak-2x", "weak-4x"]
+
+    @staticmethod
+    def declared_cells():
+        css = re.sub(r"/\*.*?\*/", "", read(STYLES_CSS), flags=re.S)
+        found = {}
+        for mod in TestMatchupCellContrast.SEVERITY_CLASSES:
+            block = re.search(
+                rf"\.matchup-cell\.{re.escape(mod)}\s*\{{([^}}]*)\}}", css)
+            if not block:
+                continue
+            body = block.group(1)
+            bg = re.search(r"background(?:-color)?:\s*(#[0-9a-fA-F]{3,6})", body)
+            fg = re.search(r"(?<!-)\bcolor:\s*(#[0-9a-fA-F]{3,6})", body)
+            if bg and fg:
+                found[mod] = (bg.group(1), fg.group(1))
+        return found
+
+    @pytest.mark.parametrize("mod", SEVERITY_CLASSES)
+    def test_every_severity_cell_meets_aa(self, mod):
+        declared = self.declared_cells()
+        assert mod in declared, (
+            f".matchup-cell.{mod} must declare an explicit background and "
+            f"colour so its contrast can be measured"
+        )
+        bg, fg = declared[mod]
+        ratio = contrast(fg, bg)
+        assert ratio >= WCAG_AA_NORMAL, (
+            f".matchup-cell.{mod} is {ratio:.2f}:1 ({fg} on {bg}); AA needs "
+            f"{WCAG_AA_NORMAL}:1"
+        )
+
+    def test_the_neutral_cell_does_not_depend_on_theme_text(self):
+        """`neutral` used `var(--text-primary)` over a translucent white.
+
+        On the details page the card is #FFFFFF in both themes, so in dark mode
+        that resolved to near-white text on near-white — the same defect as
+        `.ability-chip`, in a cell that appears more often than any other.
+        """
+        css = re.sub(r"/\*.*?\*/", "", read(STYLES_CSS), flags=re.S)
+        block = re.search(r"\.matchup-cell\.neutral\s*\{([^}]*)\}", css)
+        assert block, "no .matchup-cell.neutral rule"
+        assert "--text-primary" not in block.group(1), (
+            ".matchup-cell.neutral inherits --text-primary, which is near-white "
+            "in dark mode and sits on a near-white cell"
+        )
+
+    def test_severity_is_never_signalled_by_colour_alone(self):
+        """Every cell carries its multiplier as text.
+
+        Colour-coding a grid is fine; colour-coding it *only* is not, and the
+        renderer that draws these cells must always write the label.
+        """
+        js = read("App/static/js/ml_playground.js")
+        assert re.search(r"label\s*=\s*['\"]", js), (
+            "ml_playground.js no longer writes a textual multiplier label"
+        )

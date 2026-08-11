@@ -448,16 +448,127 @@ class TestDiagnostics:
 # ── Type Coverage Tests ──
 
 class TestTypeCoverage:
+    """These two tests used to be the whole of this class, and both passed
+    against output that was wrong on every deployment.
+
+    `'weaknesses' in result` is true when the value is `[]`.
+    `0 <= coverage_score <= 1` is true when the score is `0.0`.
+
+    Production returned exactly that — empty lists and a zero score — for
+    every team anyone ever built, and answered 200 while doing it. The asserts
+    below now check values, and `TestCoverageWithTheShapeProductionActuallyHas`
+    covers the reason the old ones could not.
+    """
+
     def test_type_coverage_returns_all_keys(self, analytics):
         result = analytics.calculate_team_type_coverage(['Charizard', 'Blastoise'])
-        assert 'weaknesses' in result
-        assert 'resistances' in result
-        assert 'coverage_score' in result
-        assert 'worst_case' in result
+        for key in ('weaknesses', 'resistances', 'coverage_score', 'worst_case'):
+            assert key in result
+        assert len(result['worst_case']) == 18
 
-    def test_coverage_score_is_bounded(self, analytics):
+    def test_coverage_score_is_bounded_and_not_zero(self, analytics):
         result = analytics.calculate_team_type_coverage(['Mewtwo', 'Mew'])
         assert 0 <= result['coverage_score'] <= 1
+        # Two psychic Pokemon resist fighting and psychic, so a real
+        # calculation cannot return an empty resistance list.
+        assert result['resistances'], "no resistances for an all-psychic team"
+
+    def test_worst_case_takes_the_weakest_member(self, analytics):
+        """Charizard is 4x weak to rock; Blastoise takes neutral damage.
+
+        The team's exposure is the worst member's, not an average — a rock
+        attack still deletes the Charizard.
+        """
+        result = analytics.calculate_team_type_coverage(['Charizard', 'Blastoise'])
+        assert result['worst_case']['rock'] == 4.0
+        assert 'rock' in result['weaknesses']
+
+    def test_each_member_is_reported_separately(self, analytics):
+        """What makes the grid a matrix rather than one row drawn six times.
+
+        The /pokemon-ml renderer had 18 rows whose cell value was looked up by
+        column only, so every row was identical and the grid carried exactly
+        18 numbers pretending to be 324. Per-member multipliers are what a
+        real matrix needs, and the API has to supply them.
+        """
+        result = analytics.calculate_team_type_coverage(['Charizard', 'Blastoise'])
+        members = {m['name']: m for m in result['members']}
+        assert set(members) == {'Charizard', 'Blastoise'}
+
+        assert members['Charizard']['multipliers']['rock'] == 4.0
+        assert members['Blastoise']['multipliers']['rock'] == 1.0
+        assert members['Charizard']['multipliers'] != members['Blastoise']['multipliers']
+
+    def test_member_rows_carry_their_types_for_labelling(self, analytics):
+        result = analytics.calculate_team_type_coverage(['Charizard'])
+        member = result['members'][0]
+        assert member['type1'] == 'fire'
+        assert member['type2'] == 'flying'
+        assert len(member['multipliers']) == 18
+
+    def test_members_are_ordered_as_requested(self, analytics):
+        """A grid whose rows reshuffle between loads cannot be read."""
+        team = ['Snorlax', 'Charizard', 'Blastoise']
+        result = analytics.calculate_team_type_coverage(team)
+        assert [m['name'] for m in result['members']] == team
+
+
+class TestCoverageWithTheShapeProductionActuallyHas:
+    """The gap that let the bug ship.
+
+    Every other test in this file builds analytics from `pokemon.csv`, which
+    carries 18 `against_*` columns. `initialize_pokemon_analytics()` builds it
+    from the `Pokemon` model, which has none — it selects 23 named columns and
+    not one of them is an `against_*`. `calculate_team_type_coverage` silently
+    substituted 1.0 for every column it could not find, so the deployed answer
+    was a uniformly neutral matrix.
+
+    Dropping the columns reproduces the production dataframe exactly.
+    """
+
+    @pytest.fixture(scope="class")
+    def db_shaped(self, raw_df):
+        from App.lib import PokemonAnalytics
+        stripped = raw_df.drop(
+            columns=[c for c in raw_df.columns if c.startswith('against_')])
+        assert not [c for c in stripped.columns if c.startswith('against_')]
+        instance = PokemonAnalytics()
+        instance.load_data(data=stripped)
+        instance.clean_data()
+        return instance
+
+    def test_a_team_still_has_real_weaknesses(self, db_shaped):
+        result = db_shaped.calculate_team_type_coverage(['Charizard', 'Pikachu'])
+        assert result['weaknesses'], (
+            "no weaknesses without the against_* columns — the neutral "
+            "fallback is back, and every deployed matrix is blank again"
+        )
+        assert result['worst_case']['rock'] == 4.0
+
+    def test_it_matches_the_csv_backed_instance(self, db_shaped, analytics):
+        """Dev and production must not disagree about the same team."""
+        team = ['Blastoise', 'Venusaur', 'Snorlax']
+        assert (db_shaped.calculate_team_type_coverage(team)['worst_case']
+                == analytics.calculate_team_type_coverage(team)['worst_case'])
+
+    def test_the_score_is_not_silently_zero(self, db_shaped):
+        result = db_shaped.calculate_team_type_coverage(['Gengar', 'Steelix'])
+        assert result['coverage_score'] > 0
+
+    def test_a_team_is_immune_only_when_every_member_is(self, db_shaped):
+        """`worst_case` is the team's exposure, so one vulnerable member ends it.
+
+        Gengar is ghost/poison and cannot be touched by normal. Steelix is
+        steel/ground and merely resists it, so the pair is not immune — the
+        max() across members is the point, and seeding it at 0.0 is what lets
+        a genuine whole-team immunity survive.
+        """
+        solo = db_shaped.calculate_team_type_coverage(['Gengar'])
+        assert 'normal' in solo['immunities']
+
+        pair = db_shaped.calculate_team_type_coverage(['Gengar', 'Steelix'])
+        assert 'normal' not in pair['immunities']
+        assert pair['worst_case']['normal'] == 0.5
 
 
 # ── Model Persistence Tests ──

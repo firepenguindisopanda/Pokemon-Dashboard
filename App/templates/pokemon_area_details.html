@@ -134,6 +134,42 @@
           {% endif %}
         </div>
 
+        {# Type Matchups.
+
+           Computed server-side from type1/type2 by App/type_chart.py, not read
+           from the database: the `pokemon` table has no `against_*` columns,
+           which is why the /pokemon-ml grid reported every team as having zero
+           weaknesses. Deriving from the same two types the header badges show
+           means this block and those badges cannot disagree.
+
+           A real <ul>, not divs with role=list — T26's lesson. The multiplier
+           is written as text in every tile, so the colour coding is
+           reinforcement rather than the only signal. #}
+        {{ section_header('Type Matchups', icon='fa-shield-alt', color_class=accent_text_class) }}
+        <p class="matchup-intro">Damage {{ pokemon.name }} takes from each attacking type.</p>
+        <ul id="type-matchups" class="matchup-tiles"
+            aria-label="Damage taken from each attacking type">
+          {% for cell in matchups.cells %}
+          <li class="matchup-tile" data-type="{{ cell.type }}"
+              data-multiplier="{{ cell.multiplier }}">
+            <span class="matchup-cell {{ cell.css }}">{{ cell.label }}</span>
+            <span class="type-badge type-{{ cell.type }} matchup-tile-type">{{ cell.type }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <!-- /type-matchups -->
+        <p class="matchup-summary">
+          {% if matchups.weaknesses %}
+          <span class="matchup-summary-item"><strong>Weak to:</strong> {{ matchups.weaknesses | join(', ') }}</span>
+          {% endif %}
+          {% if matchups.resistances %}
+          <span class="matchup-summary-item"><strong>Resists:</strong> {{ matchups.resistances | join(', ') }}</span>
+          {% endif %}
+          {% if matchups.immunities %}
+          <span class="matchup-summary-item"><strong>Immune to:</strong> {{ matchups.immunities | join(', ') }}</span>
+          {% endif %}
+        </p>
+
         <!-- Base Stats -->
         {{ section_header('Base Stats', icon='fa-chart-bar', color_class=accent_text_class) }}
         {% set stats = [

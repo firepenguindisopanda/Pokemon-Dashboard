@@ -185,6 +185,42 @@ function loadSavedTeam(teamData, prefs) {
 }
 
 // ── Fetch Type Coverage ──
+
+/** Escape text bound for innerHTML.
+ *
+ * Pokemon names come from our own dataset, so this is belt-and-braces rather
+ * than a live hole — but this file builds markup by concatenation, and the one
+ * place a name enters that string is the place to stop worrying about it. */
+function esc(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** One matrix cell, from a multiplier to markup.
+ *
+ * The multiplier is compared against exact values because every one of them
+ * is a product of exact binary fractions — 0, 1/4, 1/2, 1, 2, 4 — so there is
+ * no rounding to be tolerant of. The old code used range comparisons plus a
+ * `|| 1.0` default, which silently reclassified every immunity as neutral.
+ *
+ * An absent multiplier renders as a dash rather than inventing a number. */
+function matchupCell(mult) {
+    var styles = {
+        0: ['immune', '×0'],
+        0.25: ['resist-4x', '¼'],
+        0.5: ['resist-2x', '½'],
+        1: ['neutral', '×1'],
+        2: ['weak-2x', '×2'],
+        4: ['weak-4x', '×4']
+    };
+    if (typeof mult !== 'number' || !styles[mult]) {
+        return '<td class="matchup-cell neutral">–</td>';
+    }
+    return '<td class="matchup-cell ' + styles[mult][0] + '">'
+         + styles[mult][1] + '</td>';
+}
+
 async function fetchTypeMatchup(team) {
     const card = document.getElementById('matchup-card');
     const grid = document.getElementById('matchup-grid');
@@ -214,28 +250,44 @@ async function fetchTypeMatchup(team) {
         // hides its overflow from keyboard users entirely.
         html += '<div class="matchup-grid-wrapper" tabindex="0" role="region" '
              + 'aria-label="Type defence matrix"><table class="matchup-table">';
-        html += '<thead><tr><th></th>';
+        html += '<caption class="visually-hidden">Damage each team member takes '
+             + 'from every attacking type</caption>';
+        html += '<thead><tr><th scope="col">Pok\u00e9mon</th>';
         allTypes.forEach(function(t) {
-            html += '<th class="type-label type-' + t + '">' + t.substring(0,3) + '</th>';
+            // Three letters fit the column; the full name stays available to a
+            // screen reader rather than being abbreviated away from it.
+            html += '<th scope="col" class="type-label type-' + t + '">'
+                 + '<span class="visually-hidden">' + t + '</span>'
+                 + '<span aria-hidden="true">' + t.substring(0, 3) + '</span></th>';
         });
         html += '</tr></thead><tbody>';
-        var defenses = data.worst_case || {};
-        allTypes.forEach(function(attType) {
-            html += '<tr><td class="type-label type-' + attType + '">' + attType + '</td>';
-            allTypes.forEach(function(defType) {
-                var mult = defenses[defType] || 1.0;
-                var cellClass = 'neutral';
-                var label = '\u00d71';
-                if (mult === 0) { cellClass = 'immune'; label = '\u00d70'; }
-                else if (mult < 0.5) { cellClass = 'resist-4x'; label = '\u00bc'; }
-                else if (mult < 1) { cellClass = 'resist-2x'; label = '\u00bd'; }
-                else if (mult > 2) { cellClass = 'weak-4x'; label = '\u00d74'; }
-                else if (mult > 1) { cellClass = 'weak-2x'; label = '\u00d72'; }
-                html += '<td class="matchup-cell ' + cellClass + '">' + label + '</td>';
+
+        // ONE ROW PER TEAM MEMBER.
+        //
+        // This loop used to run over `allTypes` and look the cell value up by
+        // COLUMN only \u2014 `defenses[defType]` \u2014 so the row variable was used for
+        // the label and nothing else and all 18 rows rendered identically. An
+        // 18x18 grid displaying 18 distinct numbers, repeated eighteen times.
+        //
+        // The second defect was in that same expression: `|| 1.0` turned every
+        // genuine 0 into neutral, so an immunity could never be shown at all.
+        (data.members || []).forEach(function(member) {
+            html += '<tr><th scope="row" class="type-label type-'
+                 + (member.type1 || 'normal') + '">' + esc(member.name) + '</th>';
+            allTypes.forEach(function(attType) {
+                html += matchupCell(member.multipliers[attType]);
             });
             html += '</tr>';
         });
-        html += '</tbody></table></div>';
+        html += '</tbody>';
+
+        // The team's actual exposure: the worst member for each attacking
+        // type. This is the row the old grid was drawing eighteen times.
+        html += '<tfoot><tr><th scope="row">Worst case</th>';
+        allTypes.forEach(function(attType) {
+            html += matchupCell((data.worst_case || {})[attType]);
+        });
+        html += '</tr></tfoot></table></div>';
         grid.innerHTML = html;
     } catch (e) {}
 }

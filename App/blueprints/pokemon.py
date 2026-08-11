@@ -4,6 +4,7 @@ import logging
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_jwt_extended import jwt_required, current_user
 from App.models import db, Pokemon, UserPokemon
+from App.type_chart import describe_matchups
 
 logger = logging.getLogger(__name__)
 
@@ -140,10 +141,15 @@ def pokemon_area():
 def pokemon_area_details(pokemon_id=None):
     """View detailed information about a single Pokemon."""
     pokemon = db.session.get(Pokemon, pokemon_id).get_json()
+    # Derived here rather than stored: the `Pokemon` table has no `against_*`
+    # columns, so a grid built from the database alone would be uniformly
+    # neutral — which is exactly what /pokemon-ml shipped. Computing it from
+    # the same type1/type2 the header renders means the two cannot disagree.
     return render_template(
         "pokemon_area_details.html",
         current_user=current_user,
         pokemon=pokemon,
+        matchups=describe_matchups(pokemon["type1"], pokemon["type2"]),
     )
 
 
